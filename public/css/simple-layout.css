@@ -1,0 +1,60 @@
+/* Simplified layout styles */
+.simple-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.stat-summary {
+    font-size: 16px;
+    color: #495057;
+}
+
+.stat-summary span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.import-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.import-success h3 {
+    margin: 0 0 10px 0;
+    color: #155724;
+}
+
+.import-success .success-details {
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.import-success .success-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.import-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.import-btn.loading {
+    background: #ffc107;
+    color: #212529;
+}
+
+.status.processing {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}

@@ -1,0 +1,25 @@
+{
+  "name": "ffhs-visual-shot-importer",
+  "version": "1.0.0",
+  "description": "CSV shot data import system for SQLite database",
+  "main": "index.html",
+  "scripts": {
+    "dev": "bun run --bun dev-server.js",
+    "start": "bun run --bun dev-server.js",
+    "build": "echo 'No build step required for static files'",
+    "serve": "bun run --bun dev-server.js"
+  },
+  "keywords": [
+    "csv",
+    "sqlite",
+    "import",
+    "sports",
+    "shots",
+    "data"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bun": "^1.0.0"
+  }
+}
