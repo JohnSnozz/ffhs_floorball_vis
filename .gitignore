@@ -22,6 +22,7 @@ backup_*/
 *_backup/
 *.old
 ffhs_floorbal_vis_old/
+backups/
 
 # OS files
 .DS_Store

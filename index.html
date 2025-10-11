@@ -71,7 +71,42 @@
                             <option value="">Choose a game...</option>
                         </select>
                     </div>
-                    
+
+                    <div class="filters-section">
+                        <h3>Filters</h3>
+                        <div class="filters-container">
+                            <div class="filter-group">
+                                <label for="filter-shooter">Shooter:</label>
+                                <select id="filter-shooter" multiple size="5">
+                                    <option value="">All Shooters</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label for="filter-result">Result:</label>
+                                <select id="filter-result" multiple size="4">
+                                    <option value="" selected>All Results</option>
+                                    <option value="Goal">Goal</option>
+                                    <option value="Saved">Saved</option>
+                                    <option value="Missed">Missed</option>
+                                    <option value="Blocked">Blocked</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label for="filter-type">Type:</label>
+                                <select id="filter-type" multiple size="4">
+                                    <option value="" selected>All Types</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-actions">
+                                <button id="apply-filters-btn" class="filter-btn">Apply Filters</button>
+                                <button id="reset-filters-btn" class="filter-btn secondary">Reset Filters</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="charts-container">
                         <div class="chart-section full-width">
                             <h3>Shot Map</h3>

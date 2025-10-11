@@ -22,6 +22,7 @@ class FloorballApp {
         debugLog('FloorballApp constructor called');
         this.db = null;
         this.currentData = null;
+        this.currentGameData = null; // Store current game shots for filtering
         this.initializeApp().catch(error => {
             console.error('App initialization failed:', error);
             debugLog('App initialization failed', { error: error.message });
@@ -76,6 +77,7 @@ class FloorballApp {
         console.log('SQL.js loaded successfully');
         
         // Try to load existing database file first
+        let loadedExisting = false;
         try {
             console.log('Checking for existing database file...');
             const response = await fetch('./floorball_data.sqlite');
@@ -84,14 +86,20 @@ class FloorballApp {
                 const dbBuffer = await response.arrayBuffer();
                 this.db = new SQL.Database(new Uint8Array(dbBuffer));
                 console.log('Existing database file loaded successfully');
-                
+
                 // Verify tables exist
                 const tables = this.db.exec("SELECT name FROM sqlite_master WHERE type='table'");
                 console.log('Existing tables:', tables);
-                return; // Exit early if we loaded existing database
+                loadedExisting = true;
             }
         } catch (error) {
             console.log('No existing database file found, creating new one...');
+        }
+
+        if (loadedExisting) {
+            await this.migrateDatabase();
+            this.createOrUpdateViews();
+            return;
         }
         
         // Create new database if no existing file
@@ -144,13 +152,135 @@ class FloorballApp {
                 sh INTEGER,
                 distance REAL,
                 angle REAL,
+                x_m REAL,
+                y_m REAL,
+                x_graph REAL,
+                y_graph REAL,
                 player_team1 INTEGER,
                 player_team2 INTEGER,
                 FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
             )
         `);
-        
+
         console.log('Database tables created successfully');
+
+        this.createOrUpdateViews();
+    }
+
+    async migrateDatabase() {
+        console.log('Checking database schema for migrations...');
+        await debugLog('Migration: Checking database schema');
+
+        try {
+            const tableInfo = this.db.exec("PRAGMA table_info(shots)");
+            const columns = tableInfo[0].values.map(row => row[1]);
+
+            console.log('Existing columns:', columns);
+            await debugLog('Migration: Existing columns', { columns, count: columns.length });
+
+            const requiredColumns = ['x_m', 'y_m', 'x_graph', 'y_graph'];
+            const missingColumns = requiredColumns.filter(col => !columns.includes(col));
+
+            if (missingColumns.length > 0) {
+                console.log('Missing columns detected, adding:', missingColumns);
+                await debugLog('Migration: Adding missing columns', { missingColumns });
+
+                missingColumns.forEach(colName => {
+                    this.db.run(`ALTER TABLE shots ADD COLUMN ${colName} REAL`);
+                    console.log(`Added column: ${colName}`);
+                });
+
+                await debugLog('Migration: Columns added successfully');
+
+                console.log('Calculating coordinates for existing shots...');
+                const shots = this.db.exec("SELECT shot_id, distance, angle FROM shots");
+
+                if (shots.length > 0) {
+                    shots[0].values.forEach(row => {
+                        const [shotId, distance, angle] = row;
+                        const coords = this.calculateCoordinates(distance, angle);
+
+                        this.db.run(`
+                            UPDATE shots
+                            SET x_m = ?, y_m = ?, x_graph = ?, y_graph = ?
+                            WHERE shot_id = ?
+                        `, [coords.x_m, coords.y_m, coords.x_graph, coords.y_graph, shotId]);
+                    });
+                    console.log(`Updated coordinates for ${shots[0].values.length} shots`);
+                    await debugLog('Migration: Updated coordinates', { shotCount: shots[0].values.length });
+                }
+            } else {
+                console.log('Database schema is up to date');
+                await debugLog('Migration: Schema is up to date', { columnCount: columns.length });
+            }
+
+            // Verify final schema
+            const finalTableInfo = this.db.exec("PRAGMA table_info(shots)");
+            const finalColumns = finalTableInfo[0].values.map(row => row[1]);
+            console.log('Final column count:', finalColumns.length);
+            await debugLog('Migration: Complete', { finalColumnCount: finalColumns.length, finalColumns });
+
+        } catch (error) {
+            console.error('Migration error:', error);
+            await debugLog('Migration: ERROR', { error: error.message, stack: error.stack });
+        }
+    }
+
+    calculateCoordinates(distance, angle) {
+        const dist = parseFloat(distance) || 0;
+        const ang = parseFloat(angle) || 0;
+
+        const angleRad = ang * (Math.PI / 180);
+
+        const y_m = Math.sin(angleRad) * dist + 3.5;
+        const x_m = 10 - Math.cos(angleRad) * dist;
+        const x_graph = x_m * 30;
+        const y_graph = y_m * 30;
+
+        return { x_m, y_m, x_graph, y_graph };
+    }
+
+    createOrUpdateViews() {
+        try {
+            this.db.run(`DROP VIEW IF EXISTS shots_view`);
+        } catch (error) {
+            console.log('No existing view to drop');
+        }
+
+        this.db.run(`
+            CREATE VIEW shots_view AS
+            SELECT
+                shot_id,
+                game_id,
+                date,
+                team1,
+                team2,
+                shooting_team,
+                result,
+                type,
+                xg,
+                xgot,
+                shooter,
+                passer,
+                t1lw,
+                t1c,
+                t1rw,
+                t1ld,
+                t1rd,
+                t1g,
+                t1x,
+                pp,
+                sh,
+                distance,
+                angle,
+                x_m,
+                y_m,
+                x_graph,
+                y_graph
+            FROM shots
+        `);
+
+        console.log('Database views created/updated successfully');
     }
 
     async saveDatabaseToFile() {
@@ -259,6 +389,23 @@ class FloorballApp {
             });
         } else {
             console.error('Game selector not found');
+        }
+
+        // Filter buttons
+        const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                console.log('Apply filters clicked');
+                this.applyFilters();
+            });
+        }
+
+        const resetFiltersBtn = document.getElementById('reset-filters-btn');
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', () => {
+                console.log('Reset filters clicked');
+                this.resetFilters();
+            });
         }
     }
 
@@ -421,6 +568,42 @@ class FloorballApp {
         previewDiv.innerHTML = html;
     }
 
+    generateShotHash(shotData) {
+        const normalize = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+
+            const strValue = value.toString().replace(/"/g, '').trim();
+
+            if (strValue === '') return '';
+
+            if (/^-?\d+\.?\d*$/.test(strValue)) {
+                return parseFloat(strValue).toString();
+            }
+
+            return strValue;
+        };
+
+        const parts = [
+            normalize(shotData['Date'] || shotData.date),
+            normalize(shotData['Team 1'] || shotData.team1),
+            normalize(shotData['Team 2'] || shotData.team2),
+            normalize(shotData['Time'] || shotData.time),
+            normalize(shotData['Shooting Team'] || shotData.shooting_team),
+            normalize(shotData['Result'] || shotData.result),
+            normalize(shotData['Type'] || shotData.type),
+            normalize(shotData['xG'] || shotData.xg),
+            normalize(shotData['xGOT'] || shotData.xgot),
+            normalize(shotData['Shooter'] || shotData.shooter),
+            normalize(shotData['Passer'] || shotData.passer),
+            normalize(shotData['Distance'] || shotData.distance),
+            normalize(shotData['Angle'] || shotData.angle),
+            normalize(shotData['PP'] || shotData.pp),
+            normalize(shotData['SH'] || shotData.sh)
+        ];
+
+        return parts.join('|').toLowerCase().replace(/\s+/g, '');
+    }
+
     async importData() {
         const gameName = document.getElementById('game-name').value.trim();
         const gameDate = document.getElementById('game-date').value;
@@ -436,104 +619,198 @@ class FloorballApp {
         }
 
         try {
-            console.log('Starting import process...');
-            console.log('Current data:', this.currentData);
-            
-            // Extract team names from the first data row
+            console.log('Starting import process with duplicate detection...');
+
             const firstRow = this.currentData.data[0];
             const team1 = firstRow['Team 1'];
             const team2 = firstRow['Team 2'];
-            
-            console.log('Team 1:', team1, 'Team 2:', team2);
 
-            // Check if database exists
-            console.log('Database object:', this.db);
-            console.log('Database constructor:', this.db.constructor.name);
-            
-            // Insert game record
-            console.log('Inserting game record...');
-            console.log('Game data:', {gameName, gameDate, team1, team2});
-            
-            try {
+            console.log('Loading ALL existing shots from database for duplicate check...');
+            let allExistingShots = [];
+            const allShotsResult = this.db.exec(`SELECT * FROM shots`);
+            if (allShotsResult.length > 0) {
+                const columns = allShotsResult[0].columns;
+                allExistingShots = allShotsResult[0].values.map(row => {
+                    const shot = {};
+                    columns.forEach((col, index) => {
+                        shot[col] = row[index];
+                    });
+                    return shot;
+                });
+            }
+            console.log(`Found ${allExistingShots.length} total shots in database for duplicate checking`);
+
+            const existingShotHashes = new Set(allExistingShots.map(shot => this.generateShotHash(shot)));
+            console.log(`Generated ${existingShotHashes.size} unique hashes from all existing shots`);
+
+            if (allExistingShots.length > 0) {
+                console.log('===== HASH DEBUG =====');
+                console.log('Sample DB shot raw data:', allExistingShots[0]);
+                console.log('Sample DB shot hash:', this.generateShotHash(allExistingShots[0]));
+                console.log('Sample CSV shot raw data:', this.currentData.data[0]);
+                console.log('Sample CSV shot hash:', this.generateShotHash(this.currentData.data[0]));
+                console.log('Hashes match?', this.generateShotHash(allExistingShots[0]) === this.generateShotHash(this.currentData.data[0]));
+                console.log('===== END HASH DEBUG =====');
+            }
+
+            const existingGameResult = this.db.exec(`
+                SELECT game_id FROM games
+                WHERE LOWER(TRIM(game_name)) = LOWER(TRIM(?))
+                AND game_date = ?
+            `, [gameName, gameDate]);
+
+            let gameId;
+            let isNewGame = false;
+
+            if (existingGameResult.length > 0 && existingGameResult[0].values.length > 0) {
+                gameId = existingGameResult[0].values[0][0];
+                console.log(`Found existing game with ID: ${gameId}`);
+            } else {
                 this.db.run(`
-                    INSERT INTO games (game_name, game_date, team1, team2) 
+                    INSERT INTO games (game_name, game_date, team1, team2)
                     VALUES (?, ?, ?, ?)
                 `, [gameName, gameDate, team1, team2]);
-                console.log('Game insert successful');
-            } catch (insertError) {
-                console.error('Game insert failed:', insertError);
-                throw insertError;
-            }
-            
-            const gameResult = this.db.exec("SELECT last_insert_rowid()");
-            console.log('Game result:', gameResult);
-            const gameId = gameResult[0].values[0][0];
-            console.log('Game inserted with ID:', gameId);
 
-            // Insert shot data
-            console.log('Inserting shots...');
-            let shotCount = 0;
-            
+                const gameResult = this.db.exec("SELECT last_insert_rowid()");
+                gameId = gameResult[0].values[0][0];
+                isNewGame = true;
+                console.log(`Created new game with ID: ${gameId}`);
+            }
+
+            let uniqueCount = 0;
+            let duplicateCount = 0;
+
+            console.log('===== STARTING DUPLICATE CHECK =====');
+            console.log('Total CSV rows to check:', this.currentData.data.length);
+            console.log('Total existing hashes:', existingShotHashes.size);
+
             this.currentData.data.forEach((row, index) => {
-                try {
-                    this.db.run(`
-                        INSERT INTO shots (
-                            game_id, date, team1, team2, time, shooting_team, result, type,
-                            xg, xgot, shooter, passer, t1lw, t1c, t1rw, t1ld, t1rd, t1g, t1x,
-                            t2lw, t2c, t2rw, t2ld, t2rd, t2g, t2x, pp, sh, distance, angle,
-                            player_team1, player_team2
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        gameId,
-                        row['Date'],
-                        row['Team 1'],
-                        row['Team 2'],
-                        parseInt(row['Time']) || 0,
-                        row['Shooting Team'],
-                        row['Result'],
-                        row['Type'],
-                        parseFloat(row['xG']) || 0,
-                        parseFloat(row['xGOT']) || 0,
-                        row['Shooter'],
-                        row['Passer'],
-                        row['T1LW'],
-                        row['T1C'],
-                        row['T1RW'],
-                        row['T1LD'],
-                        row['T1RD'],
-                        row['T1G'],
-                        row['T1X'],
-                        row['T2LW'],
-                        row['T2C'],
-                        row['T2RW'],
-                        row['T2LD'],
-                        row['T2RD'],
-                        row['T2G'],
-                        row['T2X'],
-                        parseInt(row['PP']) || 0,
-                        parseInt(row['SH']) || 0,
-                        parseFloat(row['Distance']) || 0,
-                        parseFloat(row['Angle']) || 0,
-                        parseInt(row['Player Team 1']) || 0,
-                        parseInt(row['Player Team 2']) || 0
-                    ]);
-                    shotCount++;
-                } catch (shotError) {
-                    console.error(`Error inserting shot ${index}:`, shotError, row);
+                const shotHash = this.generateShotHash(row);
+
+                if (index === 0) {
+                    console.log('First CSV shot hash:', shotHash);
+                    console.log('First CSV shot data:', row);
+                    console.log('Checking if hash exists in Set:', existingShotHashes.has(shotHash));
+                    console.log('First 3 existing hashes:', Array.from(existingShotHashes).slice(0, 3));
+                }
+
+                if (existingShotHashes.has(shotHash)) {
+                    duplicateCount++;
+                    console.log(`DUPLICATE FOUND #${duplicateCount} - Skipping shot ${index + 1}`);
+                    if (duplicateCount <= 3) {
+                        console.log('  Duplicate details:', {
+                            time: row['Time'],
+                            shooter: row['Shooter'],
+                            distance: row['Distance'],
+                            hash: shotHash
+                        });
+                    }
+                } else {
+                    try {
+                        const distance = parseFloat(row['Distance']) || 0;
+                        const angle = parseFloat(row['Angle']) || 0;
+                        const coords = this.calculateCoordinates(distance, angle);
+
+                        if (index === 0) {
+                            console.log('First shot INSERT attempt - coords:', coords);
+                            debugLog('First shot INSERT attempt', {
+                                distance,
+                                angle,
+                                coords,
+                                gameId,
+                                shooter: row['Shooter']
+                            });
+                        }
+
+                        this.db.run(`
+                            INSERT INTO shots (
+                                game_id, date, team1, team2, time, shooting_team, result, type,
+                                xg, xgot, shooter, passer, t1lw, t1c, t1rw, t1ld, t1rd, t1g, t1x,
+                                t2lw, t2c, t2rw, t2ld, t2rd, t2g, t2x, pp, sh, distance, angle,
+                                x_m, y_m, x_graph, y_graph,
+                                player_team1, player_team2
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            gameId,
+                            row['Date'],
+                            row['Team 1'],
+                            row['Team 2'],
+                            parseInt(row['Time']) || 0,
+                            row['Shooting Team'],
+                            row['Result'],
+                            row['Type'],
+                            parseFloat(row['xG']) || 0,
+                            parseFloat(row['xGOT']) || 0,
+                            row['Shooter'],
+                            row['Passer'],
+                            row['T1LW'],
+                            row['T1C'],
+                            row['T1RW'],
+                            row['T1LD'],
+                            row['T1RD'],
+                            row['T1G'],
+                            row['T1X'],
+                            row['T2LW'],
+                            row['T2C'],
+                            row['T2RW'],
+                            row['T2LD'],
+                            row['T2RD'],
+                            row['T2G'],
+                            row['T2X'],
+                            parseInt(row['PP']) || 0,
+                            parseInt(row['SH']) || 0,
+                            distance,
+                            angle,
+                            coords.x_m,
+                            coords.y_m,
+                            coords.x_graph,
+                            coords.y_graph,
+                            parseInt(row['Player Team 1']) || 0,
+                            parseInt(row['Player Team 2']) || 0
+                        ]);
+                        uniqueCount++;
+
+                        if (index === 0) {
+                            console.log('First shot INSERT succeeded');
+                            debugLog('First shot INSERT succeeded');
+                        }
+                    } catch (shotError) {
+                        console.error(`Error inserting shot ${index}:`, shotError);
+                        debugLog(`Error inserting shot ${index}`, {
+                            error: shotError.message,
+                            stack: shotError.stack
+                        });
+                    }
                 }
             });
-            
-            console.log(`Inserted ${shotCount} shots`);
 
-            // Verify data was actually saved
-            const verifyResult = this.db.exec(`SELECT COUNT(*) as count FROM shots WHERE game_id = ?`, [gameId]);
-            const savedCount = verifyResult[0].values[0][0];
-            console.log(`Verified: ${savedCount} shots saved to database for game ID ${gameId}`);
+            console.log('===== IMPORT COMPLETE =====');
+            console.log(`Unique shots inserted: ${uniqueCount}`);
+            console.log(`Duplicate shots skipped: ${duplicateCount}`);
+            console.log(`Total CSV rows processed: ${this.currentData.data.length}`);
+            console.log('===========================');
 
-            this.showStatus(`Successfully imported ${shotCount} shots for game: ${gameName} (${savedCount} saved to database)`, 'success');
-            
-            // Reset form
+            if (uniqueCount === 0 && duplicateCount > 0) {
+                if (isNewGame) {
+                    this.db.run(`DELETE FROM games WHERE game_id = ?`, [gameId]);
+                    console.log('Deleted empty game - all shots were duplicates');
+                }
+                this.showStatus(`Import aborted: All ${duplicateCount} shots already exist in database!`, 'error');
+                alert(`WARNUNG: Alle ${duplicateCount} Schüsse existieren bereits in der Datenbank!\n\nDiese Datei wurde bereits importiert.`);
+            } else {
+                let message = isNewGame
+                    ? `Created new game and imported ${uniqueCount} shots`
+                    : `Added ${uniqueCount} new shots to existing game`;
+
+                if (duplicateCount > 0) {
+                    message += ` (${duplicateCount} duplicates skipped)`;
+                    alert(`Import erfolgreich!\n\n${uniqueCount} neue Schüsse importiert\n${duplicateCount} Duplikate übersprungen`);
+                }
+
+                this.showStatus(message, 'success');
+            }
+
             document.getElementById('game-name').value = '';
             document.getElementById('game-date').value = '';
             document.getElementById('csv-file').value = '';
@@ -542,13 +819,8 @@ class FloorballApp {
             document.getElementById('import-btn').disabled = true;
             this.currentData = null;
 
-            // Check database state before saving
             this.checkDatabaseState();
-
-            // Save database to file
             await this.saveDatabaseToFile();
-
-            // Refresh games list
             await this.loadGamesList();
 
         } catch (error) {
@@ -581,12 +853,13 @@ class FloorballApp {
     async loadGameData(gameId) {
         if (!gameId) {
             this.clearCharts();
+            this.currentGameData = null;
             return;
         }
 
         try {
             console.log(`Loading data for game ID: ${gameId}`);
-            
+
             const shots = this.db.exec(`
                 SELECT * FROM shots WHERE game_id = ? ORDER BY time
             `, [gameId]);
@@ -604,9 +877,12 @@ class FloorballApp {
                 });
 
                 console.log('Sample shot data:', data[0]);
-                this.createCharts(data);
+                this.currentGameData = data;
+                this.populateFilters(data);
+                await this.createCharts(data);
             } else {
                 console.log('No shots found for this game');
+                this.currentGameData = null;
                 this.clearCharts();
             }
         } catch (error) {
@@ -615,8 +891,97 @@ class FloorballApp {
         }
     }
 
-    createCharts(data) {
-        this.createShotMap(data);
+    populateFilters(data) {
+        // Get unique shooters
+        const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))].sort();
+        const shooterSelect = document.getElementById('filter-shooter');
+        shooterSelect.innerHTML = '<option value="" selected>All Shooters</option>';
+        shooters.forEach(shooter => {
+            const option = document.createElement('option');
+            option.value = shooter;
+            option.textContent = shooter;
+            shooterSelect.appendChild(option);
+        });
+
+        // Get unique types
+        const types = [...new Set(data.map(d => d.type).filter(t => t && t.trim() !== ''))].sort();
+        const typeSelect = document.getElementById('filter-type');
+        typeSelect.innerHTML = '<option value="" selected>All Types</option>';
+        types.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            typeSelect.appendChild(option);
+        });
+    }
+
+    applyFilters() {
+        if (!this.currentGameData) {
+            return;
+        }
+
+        const shooterSelect = document.getElementById('filter-shooter');
+        const resultSelect = document.getElementById('filter-result');
+        const typeSelect = document.getElementById('filter-type');
+
+        const selectedShooters = Array.from(shooterSelect.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+
+        const selectedResults = Array.from(resultSelect.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+
+        const selectedTypes = Array.from(typeSelect.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+
+        let filteredData = this.currentGameData;
+
+        // Apply shooter filter
+        if (selectedShooters.length > 0) {
+            filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
+        }
+
+        // Apply result filter
+        if (selectedResults.length > 0) {
+            filteredData = filteredData.filter(d => selectedResults.includes(d.result));
+        }
+
+        // Apply type filter
+        if (selectedTypes.length > 0) {
+            filteredData = filteredData.filter(d => selectedTypes.includes(d.type));
+        }
+
+        console.log(`Filtered data: ${filteredData.length} of ${this.currentGameData.length} shots`);
+        this.createCharts(filteredData);
+    }
+
+    resetFilters() {
+        // Reset all filter selections
+        const shooterSelect = document.getElementById('filter-shooter');
+        const resultSelect = document.getElementById('filter-result');
+        const typeSelect = document.getElementById('filter-type');
+
+        Array.from(shooterSelect.options).forEach(opt => {
+            opt.selected = opt.value === '';
+        });
+
+        Array.from(resultSelect.options).forEach(opt => {
+            opt.selected = opt.value === '';
+        });
+
+        Array.from(typeSelect.options).forEach(opt => {
+            opt.selected = opt.value === '';
+        });
+
+        if (this.currentGameData) {
+            this.createCharts(this.currentGameData);
+        }
+    }
+
+    async createCharts(data) {
+        await this.createShotMap(data);
     }
 
     createShotResultsChart(data) {
@@ -816,129 +1181,181 @@ class FloorballApp {
             .call(d3.axisLeft(y));
     }
 
-    createShotMap(data) {
+    async createShotMap(data) {
         console.log('Creating shot map...');
-        debugLog('Creating shot map', { dataLength: data.length });
-        
+        await debugLog('Creating shot map', { dataLength: data.length });
+
         const container = d3.select('#shot-map-chart');
         container.selectAll('*').remove();
 
-        // Floorball court dimensions (in meters, scaled for visualization)
-        // Using vertical orientation: height = length (40m), width = width (20m)
-        const courtLength = 40; // 40m length (vertical)
-        const courtWidth = 20;  // 20m width (horizontal)
-        const scale = 15; // Scale factor for visualization
-        
+        // Filter out Possession shots
+        const filteredData = data.filter(shot => {
+            const result = shot.result || '';
+            return !result.toLowerCase().includes('possession');
+        });
+
+        console.log(`Filtered shots: ${filteredData.length} (excluded ${data.length - filteredData.length} possession shots)`);
+        await debugLog('Shot map filter', {
+            total: data.length,
+            filtered: filteredData.length,
+            excluded: data.length - filteredData.length
+        });
+
+        // Use the field image dimensions
+        // The field.png image and our x_graph/y_graph coordinates should match
+        const fieldWidth = 600;  // Width of field.png
+        const fieldHeight = 1200; // Height of field.png
+
         const margin = {top: 20, right: 20, bottom: 40, left: 20};
-        const width = courtWidth * scale;   // 20m becomes width
-        const height = courtLength * scale; // 40m becomes height
 
         const svg = container
             .append('svg')
-            .attr('width', width + margin.left + margin.right)
-            .attr('height', height + margin.top + margin.bottom);
+            .attr('width', fieldWidth + margin.left + margin.right)
+            .attr('height', fieldHeight + margin.top + margin.bottom);
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
 
         // Add field background image
-        this.addFieldBackground(g, width, height);
+        g.append('image')
+            .attr('href', 'public/images/field.png')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', fieldWidth)
+            .attr('height', fieldHeight)
+            .style('opacity', 0.9);
 
-        // Draw floorball court elements (minimal since we have background)
-        this.drawFloorballCourtOverlay(g, width, height, scale);
+        // Filter shots that have valid coordinates and add visual coordinates
+        const shotsWithCoords = filteredData.filter(shot => {
+            const x = parseFloat(shot.x_graph);
+            const y = parseFloat(shot.y_graph);
+            return !isNaN(x) && !isNaN(y) && x >= 0 && y >= 0;
+        }).map(shot => {
+            // Determine if we need to flip coordinates based on shooting team
+            const team1 = shot.team1;
+            const shootingTeam = shot.shooting_team;
+            const isTeam1 = shootingTeam === team1;
 
-        // Prepare shot data with coordinates
-        const shotData = this.prepareShotMapData(data, width, height, scale);
-        
-        if (shotData.length === 0) {
+            let visualX, visualY;
+
+            if (isTeam1) {
+                // Team 1 shoots as-is
+                visualX = parseFloat(shot.x_graph);
+                visualY = parseFloat(shot.y_graph);
+            } else {
+                // Team 2 shoots flipped
+                visualX = 600 - parseFloat(shot.x_graph);
+                visualY = 1200 - parseFloat(shot.y_graph);
+            }
+
+            return {
+                ...shot,
+                visualX: visualX,
+                visualY: visualY,
+                isTeam1: isTeam1
+            };
+        });
+
+        console.log(`Shots with valid coordinates: ${shotsWithCoords.length}`);
+        await debugLog('Shots with coordinates', {
+            count: shotsWithCoords.length,
+            sampleShot: shotsWithCoords[0] ? {
+                team1: shotsWithCoords[0].team1,
+                shooting_team: shotsWithCoords[0].shooting_team,
+                x_graph: shotsWithCoords[0].x_graph,
+                y_graph: shotsWithCoords[0].y_graph,
+                visualX: shotsWithCoords[0].visualX,
+                visualY: shotsWithCoords[0].visualY,
+                isTeam1: shotsWithCoords[0].isTeam1
+            } : null
+        });
+
+        if (shotsWithCoords.length === 0) {
             g.append('text')
-                .attr('x', width / 2)
-                .attr('y', height / 2)
+                .attr('x', fieldWidth / 2)
+                .attr('y', fieldHeight / 2)
                 .attr('text-anchor', 'middle')
                 .style('fill', '#666')
+                .style('font-size', '16px')
                 .text('No shot location data available');
             return;
         }
 
-        // Create shot visualization (hexagonal or fallback)
-        console.log('Creating shot visualization...');
-        await debugLog('Creating shot visualization', { d3Available: typeof d3 !== 'undefined', hexbinAvailable: typeof d3.hexbin !== 'undefined' });
-        
-        if (typeof d3.hexbin === 'undefined') {
-            console.log('d3.hexbin not available, using simple scatter plot');
-            await debugLog('d3.hexbin not available, using scatter plot fallback');
-            this.createScatterShotMap(g, shotData, width, height);
-            return;
-        }
-        
-        const hexRadius = Math.min(width, height) / 40;
-        const hexbin = d3.hexbin()
-            .radius(hexRadius)
-            .extent([[0, 0], [width, height]]);
-            
-        console.log('Hexbin created successfully');
-        await debugLog('Hexbin created successfully', { radius: hexRadius });
-
-        const hexData = hexbin(shotData);
-
-        // Calculate success rate for each hexagon
-        hexData.forEach(hex => {
-            const goals = hex.filter(d => d.result === 'Goal').length;
-            const total = hex.length;
-            hex.successRate = total > 0 ? goals / total : 0;
-            hex.totalShots = total;
-            hex.goals = goals;
-        });
-
-        // Color scale based on success rate
-        const colorScale = d3.scaleSequential(d3.interpolateRdYlBu)
-            .domain([0, d3.max(hexData, d => d.successRate) || 1]);
-
-        // Size scale based on number of shots
-        const sizeScale = d3.scaleSqrt()
-            .domain([1, d3.max(hexData, d => d.totalShots) || 1])
-            .range([2, hexRadius]);
+        // Color scale based on result
+        const colorScale = d3.scaleOrdinal()
+            .domain(['Goal', 'Saved', 'Missed', 'Blocked'])
+            .range(['#28a745', '#007bff', '#ffc107', '#dc3545']);
 
         // Create tooltip
-        const tooltip = d3.select('body')
-            .append('div')
-            .attr('class', 'tooltip')
-            .style('opacity', 0);
+        const tooltip = d3.select('body').select('.tooltip').empty()
+            ? d3.select('body').append('div').attr('class', 'tooltip').style('opacity', 0)
+            : d3.select('body').select('.tooltip');
 
-        // Draw hexagons
-        g.selectAll('.hexagon')
-            .data(hexData.filter(d => d.totalShots > 0))
-            .enter().append('path')
-            .attr('class', 'hexagon')
-            .attr('d', d => hexbin.hexagon(sizeScale(d.totalShots)))
-            .attr('transform', d => `translate(${d.x},${d.y})`)
-            .style('fill', d => colorScale(d.successRate))
+        // Create scale for point size based on xG (0 to 1)
+        const radiusScale = d3.scaleSqrt()
+            .domain([0, 1])
+            .range([3, 10]); // Minimum 3px, maximum 10px radius
+
+        // Draw shot dots
+        g.selectAll('.shot-dot')
+            .data(shotsWithCoords)
+            .enter().append('circle')
+            .attr('class', 'shot-dot')
+            .attr('cx', d => d.visualX)
+            .attr('cy', d => d.visualY)
+            .attr('r', d => {
+                const xg = parseFloat(d.xg) || 0;
+                return radiusScale(Math.min(1, Math.max(0, xg))); // Clamp between 0 and 1
+            })
+            .style('fill', d => colorScale(d.result))
+            .style('stroke', '#fff')
+            .style('stroke-width', 1.5)
             .style('opacity', 0.8)
             .on('mouseover', function(event, d) {
+                const xg = parseFloat(d.xg) || 0;
+                const baseRadius = radiusScale(Math.min(1, Math.max(0, xg)));
+
+                d3.select(this)
+                    .style('opacity', 1)
+                    .attr('r', baseRadius + 2); // Increase by 2px on hover
+
                 tooltip.transition()
                     .duration(200)
                     .style('opacity', .9);
+
                 tooltip.html(`
-                    <strong>Shots: ${d.totalShots}</strong><br/>
-                    Goals: ${d.goals}<br/>
-                    Success Rate: ${(d.successRate * 100).toFixed(1)}%
+                    <strong>${d.result}</strong><br/>
+                    Shooter: ${d.shooter || 'Unknown'}<br/>
+                    Distance: ${parseFloat(d.distance).toFixed(1)}m<br/>
+                    Angle: ${parseFloat(d.angle).toFixed(1)}°<br/>
+                    xG: ${parseFloat(d.xg).toFixed(2)}
                 `)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 28) + 'px');
             })
-            .on('mouseout', function(d) {
+            .on('mouseout', function(event, d) {
+                const xg = parseFloat(d.xg) || 0;
+                const baseRadius = radiusScale(Math.min(1, Math.max(0, xg)));
+
+                d3.select(this)
+                    .style('opacity', 0.8)
+                    .attr('r', baseRadius); // Return to original size
+
                 tooltip.transition()
                     .duration(500)
                     .style('opacity', 0);
             });
 
         // Add legend
-        this.addShotMapLegend(svg, width, height, margin, colorScale);
+        this.addSimpleShotMapLegend(svg, fieldWidth, fieldHeight, margin, colorScale);
+
+        console.log('Shot map created with dots');
+        await debugLog('Shot map complete', { dotsDrawn: shotsWithCoords.length });
     }
 
-    createScatterShotMap(g, shotData, width, height) {
+    async createScatterShotMap(g, shotData, width, height) {
         console.log('Creating scatter plot shot map');
-        debugLog('Creating scatter plot shot map', { shotCount: shotData.length });
+        await debugLog('Creating scatter plot shot map', { shotCount: shotData.length });
         
         // Create simple scatter plot as fallback
         const colorScale = d3.scaleOrdinal()
@@ -1150,6 +1567,40 @@ class FloorballApp {
                 attackingGoal: shot.shooting_team === team1 ? 'top' : 'bottom'
             };
         }).filter(shot => shot.distance > 0); // Only include shots with distance data
+    }
+
+    addSimpleShotMapLegend(svg, width, height, margin, colorScale) {
+        const legend = svg.append('g')
+            .attr('class', 'shot-map-legend')
+            .attr('transform', `translate(${margin.left + 20}, ${height + margin.top + 10})`);
+
+        const legendData = [
+            { result: 'Goal', label: 'Goal' },
+            { result: 'Saved', label: 'Saved' },
+            { result: 'Missed', label: 'Missed' },
+            { result: 'Blocked', label: 'Blocked' }
+        ];
+
+        const legendItems = legend.selectAll('.legend-item')
+            .data(legendData)
+            .enter().append('g')
+            .attr('class', 'legend-item')
+            .attr('transform', (d, i) => `translate(${i * 120}, 0)`);
+
+        legendItems.append('circle')
+            .attr('r', 5)
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .style('fill', d => colorScale(d.result))
+            .style('stroke', '#fff')
+            .style('stroke-width', 1.5);
+
+        legendItems.append('text')
+            .attr('x', 12)
+            .attr('y', 4)
+            .text(d => d.label)
+            .style('font-size', '14px')
+            .style('fill', '#333');
     }
 
     addShotMapLegend(svg, width, height, margin, colorScale) {
