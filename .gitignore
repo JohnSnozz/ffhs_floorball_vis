@@ -52,3 +52,7 @@ temp/
 
 # CSV data files (uncomment if you don't want to track these)
 # *.csv
+
+
+# Other stuff
+CLAUDE.md

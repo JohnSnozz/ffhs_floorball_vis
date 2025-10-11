@@ -99,6 +99,7 @@ class FloorballApp {
         if (loadedExisting) {
             await this.migrateDatabase();
             this.createOrUpdateViews();
+            await this.saveDatabaseToFile(); // Save after migration
             return;
         }
         
@@ -220,6 +221,25 @@ class FloorballApp {
             console.log('Final column count:', finalColumns.length);
             await debugLog('Migration: Complete', { finalColumnCount: finalColumns.length, finalColumns });
 
+            // Recalculate all coordinates with the corrected formula
+            console.log('Recalculating coordinates for all existing shots...');
+            const allShots = this.db.exec("SELECT shot_id, distance, angle FROM shots");
+
+            if (allShots.length > 0 && allShots[0].values.length > 0) {
+                allShots[0].values.forEach(row => {
+                    const [shotId, distance, angle] = row;
+                    const coords = this.calculateCoordinates(distance, angle);
+
+                    this.db.run(`
+                        UPDATE shots
+                        SET x_m = ?, y_m = ?, x_graph = ?, y_graph = ?
+                        WHERE shot_id = ?
+                    `, [coords.x_m, coords.y_m, coords.x_graph, coords.y_graph, shotId]);
+                });
+                console.log(`Recalculated coordinates for ${allShots[0].values.length} shots`);
+                await debugLog('Migration: Recalculated all coordinates', { shotCount: allShots[0].values.length });
+            }
+
         } catch (error) {
             console.error('Migration error:', error);
             await debugLog('Migration: ERROR', { error: error.message, stack: error.stack });
@@ -233,7 +253,8 @@ class FloorballApp {
         const angleRad = ang * (Math.PI / 180);
 
         const y_m = Math.sin(angleRad) * dist + 3.5;
-        const x_m = 10 - Math.cos(angleRad) * dist;
+        const x_m_old = 10 - Math.cos(angleRad) * dist;
+        const x_m = 20 - x_m_old; // Flip on vertical line at 10m
         const x_graph = x_m * 30;
         const y_graph = y_m * 30;
 
