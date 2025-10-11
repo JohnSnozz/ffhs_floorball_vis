@@ -1,7 +1,25 @@
-// Simple development server using Bun
 import { writeFile, appendFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+
+// Load .env file if it exists
+try {
+  const envPath = './.env';
+  if (existsSync(envPath)) {
+    const envContent = readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          process.env[key.trim()] = valueParts.join('=').trim();
+        }
+      }
+    });
+  }
+} catch (error) {
+  console.log('No .env file found, using defaults');
+}
 
 const port = process.env.PORT || 3000;
 
@@ -17,7 +35,7 @@ Bun.serve({
         const arrayBuffer = await req.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
 
-        const dbPath = join('./public/assets/shots_database.sqlite');
+        const dbPath = join('./floorball_data.sqlite');
         await writeFile(dbPath, uint8Array);
 
         return new Response(JSON.stringify({ success: true }), {
@@ -41,25 +59,23 @@ Bun.serve({
       }
     }
 
-    // Handle logging endpoint
-    if (filePath === '/api/log' && req.method === 'POST') {
+    // Handle debug logging endpoint
+    if (filePath === '/api/debug-log' && req.method === 'POST') {
       try {
         const logEntry = await req.json();
         const date = new Date().toISOString().split('T')[0];
-        const logFileName = `${date}-app.log`;
+        const logFileName = `${date}-debug.log`;
         const logPath = join('./logs', logFileName);
 
-        // Ensure logs directory exists
         if (!existsSync('./logs')) {
           await mkdir('./logs', { recursive: true });
         }
 
-        // Format log entry
-        const logLine = `[${logEntry.timestamp}] [${logEntry.level}] ${logEntry.category}: ${logEntry.message}`;
+        const timestamp = new Date().toISOString();
+        const logLine = `[${timestamp}] ${logEntry.message}`;
         const dataLine = logEntry.data ? `\nData: ${logEntry.data}` : '';
         const fullLogEntry = `${logLine}${dataLine}\n\n`;
 
-        // Append to log file
         await appendFile(logPath, fullLogEntry);
 
         return new Response(JSON.stringify({ success: true }), {
@@ -99,8 +115,14 @@ Bun.serve({
       filePath = '/index.html';
     }
 
-    // Remove leading slash and construct file path from public folder
-    const file = Bun.file('./public' + filePath);
+    // Serve static files
+    const file = Bun.file('.' + filePath);
+
+    // Check if file exists
+    const fileExists = await file.exists();
+    if (!fileExists) {
+      return new Response('File not found', { status: 404 });
+    }
 
     // Set content type based on file extension
     const contentType = getContentType(filePath);
@@ -115,7 +137,7 @@ Bun.serve({
     });
   },
   error() {
-    return new Response('File not found', { status: 404 });
+    return new Response('Internal Server Error', { status: 500 });
   },
 });
 
@@ -141,6 +163,6 @@ function getContentType(filePath) {
   return mimeTypes[ext] || 'text/plain';
 }
 
-console.log(`🚀 Development server running at http://localhost:${port}`);
-console.log(`📁 Serving files from: ${process.cwd()}`);
-console.log(`🛑 Press Ctrl+C to stop the server`);
+console.log(`Server running at http://localhost:${port}`);
+console.log(`Serving files from: ${process.cwd()}`);
+console.log(`Press Ctrl+C to stop the server`);

@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+bun.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+debug/
+*.log.*
+
+# Database files (uncomment if you want to commit the database)
+*.sqlite
+*.db
+
+# Backup files
+backup_*/
+*_backup/
+*.old
+ffhs_floorbal_vis_old/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.directory
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.vs/
+.cursor/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# CSV data files (uncomment if you don't want to track these)
+# *.csv

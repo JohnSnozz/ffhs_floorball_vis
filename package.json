@@ -1,21 +1,22 @@
 {
-  "name": "ffhs-visual-shot-importer",
+  "name": "ffhs-floorball-visualization",
   "version": "1.0.0",
-  "description": "CSV shot data import system for SQLite database",
-  "main": "index.html",
+  "description": "Floorball shot data visualization and analysis dashboard with D3.js",
+  "main": "server.js",
   "scripts": {
-    "dev": "bun run --bun dev-server.js",
-    "start": "bun run --bun dev-server.js",
+    "dev": "bun run --bun server.js",
+    "start": "bun run --bun server.js",
     "build": "echo 'No build step required for static files'",
-    "serve": "bun run --bun dev-server.js"
+    "serve": "bun run --bun server.js"
   },
   "keywords": [
-    "csv",
+    "floorball",
+    "visualization",
+    "d3",
     "sqlite",
-    "import",
     "sports",
-    "shots",
-    "data"
+    "analytics",
+    "dashboard"
   ],
   "author": "",
   "license": "MIT",

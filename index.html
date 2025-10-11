@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floorball Statistics Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Floorball Statistics Dashboard</h1>
+        </header>
+        
+        <nav class="tabs">
+            <button class="tab-button active" data-tab="import">Import Data</button>
+            <button class="tab-button" data-tab="dashboard">Dashboard</button>
+        </nav>
+        
+        <main>
+            <!-- Import Tab -->
+            <div id="import-tab" class="tab-content active">
+                <div class="import-section">
+                    <h2>Import Game Statistics</h2>
+                    
+                    <div class="game-info">
+                        <div class="form-group">
+                            <label for="game-name">Game Name:</label>
+                            <input type="text" id="game-name" placeholder="e.g., Kloten vs Fribourg">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="game-date">Game Date:</label>
+                            <input type="date" id="game-date">
+                        </div>
+                    </div>
+                    
+                    <div class="upload-section">
+                        <div class="file-upload">
+                            <input type="file" id="csv-file" accept=".csv" style="display: none;">
+                            <button class="upload-btn" onclick="document.getElementById('csv-file').click()">
+                                Choose CSV File
+                            </button>
+                            <span id="file-name" class="file-name"></span>
+                        </div>
+                        
+                        <button id="import-btn" class="import-btn" disabled>Import Data</button>
+                    </div>
+                    
+                    <div id="import-status" class="status-message"></div>
+                    
+                    <div class="preview-section">
+                        <h3>Data Preview</h3>
+                        <div id="csv-preview" class="csv-preview"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content">
+                <div class="dashboard-section">
+                    <h2>Statistics Dashboard</h2>
+                    
+                    <div class="game-selector">
+                        <label for="selected-game">Select Game:</label>
+                        <select id="selected-game">
+                            <option value="">Choose a game...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="charts-container">
+                        <div class="chart-section full-width">
+                            <h3>Shot Map</h3>
+                            <div id="shot-map-chart" class="chart shot-map"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+</body>
+</html>
