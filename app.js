@@ -437,14 +437,23 @@ class FloorballApp {
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetTab = button.getAttribute('data-tab');
-                
+
                 // Remove active classes
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabContents.forEach(content => content.classList.remove('active'));
-                
+
                 // Add active classes
                 button.classList.add('active');
                 document.getElementById(`${targetTab}-tab`).classList.add('active');
+
+                // If switching to dashboard tab, ensure all games are loaded if nothing is selected
+                if (targetTab === 'dashboard') {
+                    const gameSelect = document.getElementById('selected-game');
+                    if (gameSelect && gameSelect.value === 'all') {
+                        // Trigger loading all games
+                        this.loadGameData('all');
+                    }
+                }
             });
         });
     }
@@ -483,14 +492,39 @@ class FloorballApp {
                 debugLog('FILE SELECTION - FileReader onload triggered');
                 this.currentData = this.parseCSV(e.target.result);
                 debugLog('FILE SELECTION - CSV parsed', { rowCount: this.currentData.data.length });
-                
+
                 this.validateCSVStructure(this.currentData);
                 debugLog('FILE SELECTION - CSV validation passed');
-                
+
+                // Auto-populate game name from filename
+                // Expected format: Team1_Team2_shots.csv
+                let gameName = '';
+                const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove file extension
+                const parts = fileName.split('_');
+
+                if (parts.length >= 2) {
+                    // Format as "Team1 - Team2"
+                    const team1 = parts[0];
+                    const team2 = parts[1];
+                    gameName = `${team1} - ${team2}`;
+                    document.getElementById('game-name').value = gameName;
+                    console.log('Auto-populated game name:', gameName);
+                }
+
+                // Auto-populate date from first CSV row
+                if (this.currentData.data.length > 0 && this.currentData.data[0]['Date']) {
+                    const csvDate = this.currentData.data[0]['Date'];
+                    document.getElementById('game-date').value = csvDate;
+                    console.log('Auto-populated game date:', csvDate);
+                }
+
                 this.showCSVPreview(this.currentData);
                 document.getElementById('import-btn').disabled = false;
-                this.showStatus('CSV file loaded successfully. Ready to import.', 'success');
-                debugLog('FILE SELECTION - Ready for import');
+                this.showStatus('CSV file loaded successfully. Game name and date auto-populated. Ready to import.', 'success');
+                debugLog('FILE SELECTION - Ready for import with auto-populated fields', {
+                    gameName: gameName,
+                    gameDate: this.currentData.data[0]['Date'] || 'not found'
+                });
             } catch (error) {
                 debugLog('FILE SELECTION - Error reading CSV', { error: error.message });
                 this.showStatus(`Error reading CSV: ${error.message}`, 'error');
@@ -854,9 +888,9 @@ class FloorballApp {
         try {
             const games = this.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
             const gameSelect = document.getElementById('selected-game');
-            
-            gameSelect.innerHTML = '<option value="">Choose a game...</option>';
-            
+
+            gameSelect.innerHTML = '<option value="all" selected>All Games</option>';
+
             if (games.length > 0) {
                 games[0].values.forEach(game => {
                     const [gameId, gameName, gameDate, team1, team2] = game;
@@ -866,6 +900,9 @@ class FloorballApp {
                     gameSelect.appendChild(option);
                 });
             }
+
+            // Automatically load all games when list is refreshed
+            this.loadGameData('all');
         } catch (error) {
             console.error('Error loading games:', error);
         }
@@ -879,13 +916,21 @@ class FloorballApp {
         }
 
         try {
-            console.log(`Loading data for game ID: ${gameId}`);
+            let shots;
 
-            const shots = this.db.exec(`
-                SELECT * FROM shots WHERE game_id = ? ORDER BY time
-            `, [gameId]);
-
-            console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} shots for game ${gameId}`);
+            if (gameId === 'all') {
+                console.log('Loading data for ALL games');
+                shots = this.db.exec(`
+                    SELECT * FROM shots ORDER BY game_id, time
+                `);
+                console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} total shots across all games`);
+            } else {
+                console.log(`Loading data for game ID: ${gameId}`);
+                shots = this.db.exec(`
+                    SELECT * FROM shots WHERE game_id = ? ORDER BY time
+                `, [gameId]);
+                console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} shots for game ${gameId}`);
+            }
 
             if (shots.length > 0 && shots[0].values.length > 0) {
                 const columns = shots[0].columns;
@@ -1685,7 +1730,7 @@ class FloorballApp {
                 .style('justify-content', 'center')
                 .style('height', '500px')
                 .style('color', '#666')
-                .text('Select a game to view shot map');
+                .text('Loading shot map...');
         });
     }
 

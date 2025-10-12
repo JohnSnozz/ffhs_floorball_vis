@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+package-lock.json
+npm-debug.log*
 bun.lock
 
 # Environment variables
@@ -56,3 +58,4 @@ temp/
 
 # Other stuff
 CLAUDE.md
+example_vis/
