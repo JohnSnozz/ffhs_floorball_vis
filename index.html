@@ -6,24 +6,51 @@
     <title>Floorball Statistics Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js" defer></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Floorball Statistics Dashboard</h1>
+            <nav class="tabs">
+                <button class="tab-button" data-tab="import">Import Data</button>
+                <button class="tab-button active" data-tab="dashboard">Dashboard</button>
+            </nav>
+            <div class="logo-placeholder">
+                <svg width="90" height="90" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4a9d9c;stop-opacity:0.3" />
+                            <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.2" />
+                        </linearGradient>
+                    </defs>
+
+                    <polygon points="45,15 65,27.5 65,52.5 45,65 25,52.5 25,27.5"
+                             fill="url(#grad1)"
+                             stroke="#4a9d9c"
+                             stroke-width="1.5"
+                             opacity="0.6"/>
+
+                    <text x="45" y="47"
+                          font-family="'Courier New', monospace"
+                          font-size="20"
+                          font-weight="700"
+                          fill="#4a9d9c"
+                          text-anchor="middle"
+                          letter-spacing="1"
+                          dominant-baseline="middle">SNZ</text>
+
+                    <circle cx="35" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                    <circle cx="45" cy="70" r="2.5" fill="#5cb8b7" opacity="0.7"/>
+                    <circle cx="55" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                </svg>
+            </div>
         </header>
-        
-        <nav class="tabs">
-            <button class="tab-button active" data-tab="import">Import Data</button>
-            <button class="tab-button" data-tab="dashboard">Dashboard</button>
-        </nav>
         
         <main>
             <!-- Import Tab -->
-            <div id="import-tab" class="tab-content active">
+            <div id="import-tab" class="tab-content">
                 <div class="import-section">
                     <h2>Import Game Statistics</h2>
                     
@@ -61,56 +88,55 @@
             </div>
             
             <!-- Dashboard Tab -->
-            <div id="dashboard-tab" class="tab-content">
+            <div id="dashboard-tab" class="tab-content active">
                 <div class="dashboard-section">
                     <h2>Statistics Dashboard</h2>
-                    
-                    <div class="game-selector">
-                        <label for="selected-game">Select Game:</label>
-                        <select id="selected-game">
-                            <option value="">Choose a game...</option>
-                        </select>
-                    </div>
 
-                    <div class="filters-section">
-                        <h3>Filters</h3>
-                        <div class="filters-container">
-                            <div class="filter-group">
-                                <label for="filter-shooter">Shooter:</label>
-                                <select id="filter-shooter" multiple size="5">
-                                    <option value="">All Shooters</option>
+                    <div class="dashboard-layout">
+                        <div class="dashboard-sidebar">
+                            <div class="game-selector">
+                                <label for="selected-game">Select Game:</label>
+                                <select id="selected-game">
+                                    <option value="">Choose a game...</option>
                                 </select>
                             </div>
 
-                            <div class="filter-group">
-                                <label for="filter-result">Result:</label>
-                                <select id="filter-result" multiple size="4">
-                                    <option value="" selected>All Results</option>
-                                    <option value="Goal">Goal</option>
-                                    <option value="Saved">Saved</option>
-                                    <option value="Missed">Missed</option>
-                                    <option value="Blocked">Blocked</option>
-                                </select>
-                            </div>
+                            <div class="filters-section">
+                                <div class="filters-container">
+                                    <div class="filter-group">
+                                        <label for="filter-shooter">Shooter:</label>
+                                        <select id="filter-shooter" multiple size="5">
+                                            <option value="">All Shooters</option>
+                                        </select>
+                                    </div>
 
-                            <div class="filter-group">
-                                <label for="filter-type">Type:</label>
-                                <select id="filter-type" multiple size="4">
-                                    <option value="" selected>All Types</option>
-                                </select>
-                            </div>
+                                    <div class="filter-group">
+                                        <div class="toggle-button-grid">
+                                            <button class="toggle-button result-filter" data-value="Goal">Goal</button>
+                                            <button class="toggle-button result-filter" data-value="Saved">Saved</button>
+                                            <button class="toggle-button result-filter" data-value="Missed">Missed</button>
+                                            <button class="toggle-button result-filter" data-value="Blocked">Blocked</button>
+                                            <button class="toggle-button type-filter" data-value="Direct">Direct</button>
+                                            <button class="toggle-button type-filter" data-value="One-timer">One-Timer</button>
+                                            <button class="toggle-button type-filter" data-value="Rebound">Rebound</button>
+                                            <button class="toggle-button type-filter turnover-filter" data-value="Turnover">Turnover</button>
+                                        </div>
+                                    </div>
 
-                            <div class="filter-actions">
-                                <button id="apply-filters-btn" class="filter-btn">Apply Filters</button>
-                                <button id="reset-filters-btn" class="filter-btn secondary">Reset Filters</button>
+                                    <div class="filter-group">
+                                        <div class="visualization-controls">
+                                            <button id="toggle-shot-dots" class="viz-toggle-button">Show Shot Points</button>
+                                            <button id="toggle-heatmap" class="viz-toggle-button active">Show Heatmap</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="charts-container">
-                        <div class="chart-section full-width">
-                            <h3>Shot Map</h3>
-                            <div id="shot-map-chart" class="chart shot-map"></div>
+                        <div class="dashboard-main">
+                            <div class="chart-section">
+                                <div id="shot-map-chart" class="chart shot-map"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

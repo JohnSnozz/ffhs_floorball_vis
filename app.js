@@ -412,20 +412,47 @@ class FloorballApp {
             console.error('Game selector not found');
         }
 
-        // Filter buttons
-        const applyFiltersBtn = document.getElementById('apply-filters-btn');
-        if (applyFiltersBtn) {
-            applyFiltersBtn.addEventListener('click', () => {
-                console.log('Apply filters clicked');
-                this.applyFilters();
+
+        // Toggle controls for visualization layers
+        const toggleShotDots = document.getElementById('toggle-shot-dots');
+        if (toggleShotDots) {
+            toggleShotDots.addEventListener('click', () => {
+                toggleShotDots.classList.toggle('active');
+                const isActive = toggleShotDots.classList.contains('active');
+                console.log('Toggle shot dots:', isActive);
+                this.toggleShotDots(isActive);
             });
         }
 
-        const resetFiltersBtn = document.getElementById('reset-filters-btn');
-        if (resetFiltersBtn) {
-            resetFiltersBtn.addEventListener('click', () => {
-                console.log('Reset filters clicked');
-                this.resetFilters();
+        const toggleHeatmap = document.getElementById('toggle-heatmap');
+        if (toggleHeatmap) {
+            toggleHeatmap.addEventListener('click', () => {
+                toggleHeatmap.classList.toggle('active');
+                const isActive = toggleHeatmap.classList.contains('active');
+                console.log('Toggle heatmap:', isActive);
+                this.toggleHeatmap(isActive);
+            });
+        }
+
+        // Setup filter toggle buttons
+        this.setupFilterToggleButtons();
+    }
+
+    setupFilterToggleButtons() {
+        // Setup all toggle buttons (result and type filters)
+        const allButtons = document.querySelectorAll('.toggle-button-grid .toggle-button');
+        allButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                button.classList.toggle('active');
+                this.applyFilters();
+            });
+        });
+
+        // Setup shooter select dropdown
+        const shooterSelect = document.getElementById('filter-shooter');
+        if (shooterSelect) {
+            shooterSelect.addEventListener('change', () => {
+                this.applyFilters();
             });
         }
     }
@@ -912,6 +939,7 @@ class FloorballApp {
         if (!gameId) {
             this.clearCharts();
             this.currentGameData = null;
+            this.currentGameId = null;
             return;
         }
 
@@ -944,11 +972,13 @@ class FloorballApp {
 
                 console.log('Sample shot data:', data[0]);
                 this.currentGameData = data;
+                this.currentGameId = gameId;
                 this.populateFilters(data);
                 await this.createCharts(data);
             } else {
                 console.log('No shots found for this game');
                 this.currentGameData = null;
+                this.currentGameId = null;
                 this.clearCharts();
             }
         } catch (error) {
@@ -968,17 +998,6 @@ class FloorballApp {
             option.textContent = shooter;
             shooterSelect.appendChild(option);
         });
-
-        // Get unique types
-        const types = [...new Set(data.map(d => d.type).filter(t => t && t.trim() !== ''))].sort();
-        const typeSelect = document.getElementById('filter-type');
-        typeSelect.innerHTML = '<option value="" selected>All Types</option>';
-        types.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            typeSelect.appendChild(option);
-        });
     }
 
     applyFilters() {
@@ -987,18 +1006,15 @@ class FloorballApp {
         }
 
         const shooterSelect = document.getElementById('filter-shooter');
-        const resultSelect = document.getElementById('filter-result');
-        const typeSelect = document.getElementById('filter-type');
+
+        // Get selected values from toggle buttons
+        const selectedResults = Array.from(document.querySelectorAll('.result-filter.active'))
+            .map(btn => btn.getAttribute('data-value'));
+
+        const selectedTypes = Array.from(document.querySelectorAll('.type-filter.active'))
+            .map(btn => btn.getAttribute('data-value'));
 
         const selectedShooters = Array.from(shooterSelect.selectedOptions)
-            .map(opt => opt.value)
-            .filter(v => v !== '');
-
-        const selectedResults = Array.from(resultSelect.selectedOptions)
-            .map(opt => opt.value)
-            .filter(v => v !== '');
-
-        const selectedTypes = Array.from(typeSelect.selectedOptions)
             .map(opt => opt.value)
             .filter(v => v !== '');
 
@@ -1009,42 +1025,61 @@ class FloorballApp {
             filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
         }
 
-        // Apply result filter
+        // Apply result filter (only if at least one is selected)
         if (selectedResults.length > 0) {
             filteredData = filteredData.filter(d => selectedResults.includes(d.result));
         }
 
-        // Apply type filter
+        // Apply type filter with turnover logic
         if (selectedTypes.length > 0) {
-            filteredData = filteredData.filter(d => selectedTypes.includes(d.type));
+            const isTurnoverActive = selectedTypes.includes('Turnover');
+            const isDirectActive = selectedTypes.includes('Direct');
+            const isOneTimerActive = selectedTypes.includes('One-timer');
+            const isReboundActive = selectedTypes.includes('Rebound');
+
+            const allowedTypes = [];
+
+            // If only Turnover is selected, show all turnover shots
+            if (isTurnoverActive && !isDirectActive && !isOneTimerActive && !isReboundActive) {
+                allowedTypes.push('Turnover | Direct');
+                allowedTypes.push('Turnover | One-timer');
+            }
+
+            if (isDirectActive) {
+                allowedTypes.push('Direct');
+                if (isTurnoverActive) {
+                    allowedTypes.push('Turnover | Direct');
+                }
+            }
+
+            if (isOneTimerActive) {
+                allowedTypes.push('One-timer');
+                if (isTurnoverActive) {
+                    allowedTypes.push('Turnover | One-timer');
+                }
+            }
+
+            if (isReboundActive) {
+                allowedTypes.push('Rebound');
+            }
+
+            if (allowedTypes.length > 0) {
+                filteredData = filteredData.filter(d => allowedTypes.includes(d.type));
+            }
         }
 
         console.log(`Filtered data: ${filteredData.length} of ${this.currentGameData.length} shots`);
         this.createCharts(filteredData);
-    }
 
-    resetFilters() {
-        // Reset all filter selections
-        const shooterSelect = document.getElementById('filter-shooter');
-        const resultSelect = document.getElementById('filter-result');
-        const typeSelect = document.getElementById('filter-type');
-
-        Array.from(shooterSelect.options).forEach(opt => {
-            opt.selected = opt.value === '';
-        });
-
-        Array.from(resultSelect.options).forEach(opt => {
-            opt.selected = opt.value === '';
-        });
-
-        Array.from(typeSelect.options).forEach(opt => {
-            opt.selected = opt.value === '';
-        });
-
-        if (this.currentGameData) {
-            this.createCharts(this.currentGameData);
+        // Update histogram overlays if player is selected
+        if (selectedShooters.length === 1) {
+            this.updateXGHistogramsWithPlayer(selectedShooters[0]);
+        } else {
+            // Clear player overlay if multiple or no shooters selected
+            this.clearPlayerOverlay();
         }
     }
+
 
     async createCharts(data) {
         await this.createShotMap(data);
@@ -1272,7 +1307,7 @@ class FloorballApp {
         const fieldWidth = 600;  // Width of field.png
         const fieldHeight = 1200; // Height of field.png
 
-        const margin = {top: 20, right: 20, bottom: 40, left: 20};
+        const margin = {top: 20, right: 250, bottom: 40, left: 20};
 
         const svg = container
             .append('svg')
@@ -1281,6 +1316,20 @@ class FloorballApp {
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Store SVG reference for toggling layers
+        this.shotMapSvg = svg;
+        this.shotMapG = g;
+
+        // Define a clipping path for the field area
+        svg.append('defs')
+            .append('clipPath')
+            .attr('id', 'field-clip')
+            .append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', fieldWidth)
+            .attr('height', fieldHeight);
 
         // Add field background image
         g.append('image')
@@ -1347,10 +1396,25 @@ class FloorballApp {
             return;
         }
 
-        // Color scale based on result
+        // Create hexbin heatmap layer with clipping to prevent overflow
+        const heatmapGroup = g.append('g')
+            .attr('class', 'heatmap-layer')
+            .attr('clip-path', 'url(#field-clip)');
+        if (shotsWithCoords.length > 0) {
+            this.createHexbinHeatmap(heatmapGroup, shotsWithCoords, fieldWidth, fieldHeight);
+        }
+
+        // Create shot dots layer (hidden by default)
+        const dotsGroup = g.append('g')
+            .attr('class', 'dots-layer')
+            .style('display', 'none'); // Hidden by default
+        this.dotsLayer = dotsGroup;
+        this.heatmapLayer = heatmapGroup;
+
+        // Color scale based on result (updated for dark theme)
         const colorScale = d3.scaleOrdinal()
             .domain(['Goal', 'Saved', 'Missed', 'Blocked'])
-            .range(['#28a745', '#007bff', '#ffc107', '#dc3545']);
+            .range(['#10B981', '#00D9FF', '#F59E0B', '#EF4444']);
 
         // Create tooltip
         const tooltip = d3.select('body').select('.tooltip').empty()
@@ -1363,7 +1427,7 @@ class FloorballApp {
             .range([3, 10]); // Minimum 3px, maximum 10px radius
 
         // Draw shot dots
-        g.selectAll('.shot-dot')
+        dotsGroup.selectAll('.shot-dot')
             .data(shotsWithCoords)
             .enter().append('circle')
             .attr('class', 'shot-dot')
@@ -1412,10 +1476,17 @@ class FloorballApp {
                     .style('opacity', 0);
             });
 
-        // Add legend
+        // Add legends
         this.addSimpleShotMapLegend(svg, fieldWidth, fieldHeight, margin, colorScale);
+        this.addHeatmapLegend(svg, fieldWidth, fieldHeight, margin);
 
-        console.log('Shot map created with dots');
+        // Hide shot legend by default (since dots are hidden by default)
+        svg.select('.shot-map-legend').style('display', 'none');
+
+        // Add xG histograms for both teams
+        this.createXGHistograms(svg, filteredData, fieldWidth, fieldHeight, margin);
+
+        console.log('Shot map created with dots and heatmap');
         await debugLog('Shot map complete', { dotsDrawn: shotsWithCoords.length });
     }
 
@@ -1669,6 +1740,819 @@ class FloorballApp {
             .style('fill', '#333');
     }
 
+    createHexbinHeatmap(group, shotsWithCoords, width, height) {
+        const heatmapLog = [];
+        heatmapLog.push(`[${new Date().toISOString()}] Starting createHexbinHeatmap`);
+        heatmapLog.push(`d3 available: ${typeof d3 !== 'undefined'}`);
+        heatmapLog.push(`d3.hexbin available: ${typeof d3.hexbin !== 'undefined'}`);
+        heatmapLog.push(`Shots provided: ${shotsWithCoords.length}`);
+        heatmapLog.push(`Width: ${width}, Height: ${height}`);
+
+        // Always log the attempt
+        console.log('createHexbinHeatmap called with', shotsWithCoords.length, 'shots');
+        console.log('d3.hexbin available:', typeof d3.hexbin);
+
+        if (!d3.hexbin) {
+            const errorMsg = 'd3-hexbin not available, using fallback grid heatmap';
+            console.warn(errorMsg);
+            heatmapLog.push(`WARNING: ${errorMsg}`);
+            debugLog('Heatmap Warning - Using fallback', { logs: heatmapLog });
+
+            // Fallback: Create a simple grid-based heatmap
+            this.createGridHeatmap(group, shotsWithCoords, width, height);
+            return;
+        }
+
+        try {
+            // Create hexbin generator with larger zones for better aggregation
+            const hexbin = d3.hexbin()
+                .x(d => d.visualX)
+                .y(d => d.visualY)
+                .radius(28) // Larger zones to aggregate more shots when data is sparse
+                .extent([[0, 0], [width, height]]);
+
+            heatmapLog.push('Hexbin generator created successfully');
+
+            // Calculate success rate for each hexbin
+            const hexData = hexbin(shotsWithCoords).map(bin => {
+                const goals = bin.filter(d => d.result === 'Goal').length;
+                const total = bin.length;
+                const successRate = total > 0 ? goals / total : 0;
+                return {
+                    ...bin,
+                    goals: goals,
+                    total: total,
+                    successRate: successRate
+                };
+            });
+            heatmapLog.push(`Hexbin data created: ${hexData.length} hexagons`);
+
+            // Filter out hexagons with very few shots for cleaner visualization
+            // Note: After mapping, we should use d.total not d.length
+            const filteredHexData = hexData.filter(d => d.total >= 1);
+            heatmapLog.push(`Filtered hexagon data: ${filteredHexData.length} hexagons`);
+
+            // Get league average for comparison (optional)
+            const leagueAverage = shotsWithCoords.filter(d => d.result === 'Goal').length / shotsWithCoords.length;
+            heatmapLog.push(`League average success rate: ${(leagueAverage * 100).toFixed(1)}%`);
+
+            // Create custom color scale for dark theme
+            // Using theme colors: purple -> cyan -> green for bad -> average -> good
+            const colorScale = d3.scaleLinear()
+                .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
+                .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+                .clamp(true);
+            heatmapLog.push('Color scale created');
+
+            // Size scale based on number of shots (use area, not radius)
+            const sizeScale = d3.scalePow()
+                .exponent(0.8)
+                .domain([0, d3.max(filteredHexData, d => d.total)])
+                .range([0.3, 1.2]); // Scale factor for hexagon size
+            heatmapLog.push(`Size scale created with max: ${d3.max(filteredHexData, d => d.total)} shots`);
+
+            // Create tooltip
+            const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
+                ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
+                : d3.select('body').select('.heatmap-tooltip');
+            heatmapLog.push('Tooltip created');
+
+            // Draw hexagons with variable size based on shot frequency
+            const hexagons = group.selectAll('.hexagon')
+                .data(filteredHexData)
+                .enter().append('g')
+                .attr('class', 'hexagon-group')
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+            heatmapLog.push(`Created ${hexagons.size()} hexagon groups`);
+
+            hexagons.append('path')
+                .attr('class', 'hexagon')
+                .attr('d', hexbin.hexagon())
+                .attr('transform', d => {
+                    const scale = sizeScale(d.total);
+                    return `scale(${scale})`;
+                })
+                .style('fill', d => colorScale(d.successRate))
+                .style('stroke', '#fff')
+                .style('stroke-width', 1)
+                .style('opacity', 0.85)
+            .on('mouseover', function(event, d) {
+                d3.select(this)
+                    .style('opacity', 1)
+                    .style('stroke-width', 2);
+
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+
+                const percentage = (d.successRate * 100).toFixed(1);
+                const aboveAverage = d.successRate > leagueAverage;
+                const diff = ((d.successRate - leagueAverage) * 100).toFixed(1);
+
+                tooltip.html(`
+                    <strong>Zone Statistics</strong><br/>
+                    Shots: ${d.total}<br/>
+                    Goals: ${d.goals}<br/>
+                    Success Rate: ${percentage}%<br/>
+                    ${aboveAverage ? '↑' : '↓'} ${Math.abs(diff)}% vs average
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function(event, d) {
+                d3.select(this)
+                    .style('opacity', 0.85)
+                    .style('stroke-width', 1);
+
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
+
+            // Add text labels for high-volume zones (optional)
+            hexagons.filter(d => d.total >= 5) // Only label zones with 5+ shots
+                .append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.3em')
+                .style('font-size', '11px')
+                .style('font-weight', 'bold')
+                .style('fill', '#fff')
+                .style('pointer-events', 'none')
+                .text(d => `${(d.successRate * 100).toFixed(0)}%`);
+
+            heatmapLog.push('Heatmap creation completed successfully');
+            debugLog('Heatmap Success', { logs: heatmapLog });
+
+        } catch (error) {
+            heatmapLog.push(`ERROR: ${error.message}`);
+            heatmapLog.push(`Stack: ${error.stack}`);
+            console.error('Error creating hexbin heatmap:', error);
+            debugLog('Heatmap Error', {
+                logs: heatmapLog,
+                error: error.message,
+                stack: error.stack
+            });
+        }
+    }
+
+    createGridHeatmap(group, shotsWithCoords, width, height) {
+        console.log('Creating fallback grid heatmap');
+
+        // Create a simple grid-based heatmap
+        const cellSize = 40; // Size of each grid cell
+        const cols = Math.ceil(width / cellSize);
+        const rows = Math.ceil(height / cellSize);
+
+        // Create grid cells
+        const grid = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const x = col * cellSize;
+                const y = row * cellSize;
+
+                // Find shots in this cell
+                const shotsInCell = shotsWithCoords.filter(shot =>
+                    shot.visualX >= x && shot.visualX < x + cellSize &&
+                    shot.visualY >= y && shot.visualY < y + cellSize
+                );
+
+                if (shotsInCell.length > 0) {
+                    const goals = shotsInCell.filter(s => s.result === 'Goal').length;
+                    const successRate = goals / shotsInCell.length;
+
+                    grid.push({
+                        x: x + cellSize / 2,
+                        y: y + cellSize / 2,
+                        total: shotsInCell.length,
+                        goals: goals,
+                        successRate: successRate
+                    });
+                }
+            }
+        }
+
+        // Color scale for dark theme
+        const colorScale = d3.scaleLinear()
+            .domain([0, 0.3, 0.6])
+            .range(['#7C3AED', '#00D9FF', '#10B981'])
+            .clamp(true);
+
+        // Draw grid cells
+        group.selectAll('.grid-cell')
+            .data(grid)
+            .enter().append('rect')
+            .attr('class', 'grid-cell')
+            .attr('x', d => d.x - cellSize / 2)
+            .attr('y', d => d.y - cellSize / 2)
+            .attr('width', cellSize)
+            .attr('height', cellSize)
+            .style('fill', d => colorScale(d.successRate))
+            .style('stroke', '#fff')
+            .style('stroke-width', 1)
+            .style('opacity', d => Math.min(0.8, 0.2 + (d.total * 0.1)))
+            .append('title')
+            .text(d => `Shots: ${d.total}, Goals: ${d.goals}, Success: ${(d.successRate * 100).toFixed(1)}%`);
+
+        console.log('Grid heatmap created with', grid.length, 'cells');
+    }
+
+    toggleShotDots(show) {
+        if (this.dotsLayer) {
+            this.dotsLayer.style('display', show ? 'block' : 'none');
+        }
+        // Toggle shot legend visibility
+        if (this.shotMapSvg) {
+            this.shotMapSvg.select('.shot-map-legend').style('display', show ? 'block' : 'none');
+        }
+    }
+
+    toggleHeatmap(show) {
+        if (this.heatmapLayer) {
+            this.heatmapLayer.style('display', show ? 'block' : 'none');
+        }
+        // Toggle heatmap legends visibility
+        if (this.shotMapSvg) {
+            this.shotMapSvg.select('.heatmap-legend').style('display', show ? 'block' : 'none');
+            this.shotMapSvg.select('.size-legend').style('display', show ? 'block' : 'none');
+        }
+    }
+
+    addHeatmapLegend(svg, width, height, margin) {
+        // Position legend horizontally in the top goal zone (first 90 pixels)
+        const legendGroup = svg.append('g')
+            .attr('class', 'heatmap-legend')
+            .attr('transform', `translate(${margin.left + 150}, ${margin.top + 30})`);
+
+        // Legend title
+        legendGroup.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .style('fill', '#E5E5E7')
+            .text('Success Rate');
+
+        // Color gradient definition (horizontal)
+        const gradient = svg.append('defs')
+            .append('linearGradient')
+            .attr('id', 'heatmap-gradient')
+            .attr('x1', '0%')
+            .attr('x2', '100%')
+            .attr('y1', '0%')
+            .attr('y2', '0%');
+
+        const colorStops = [
+            { offset: '0%', color: '#7C3AED' },    // Purple (poor)
+            { offset: '50%', color: '#00D9FF' },   // Cyan (average)
+            { offset: '100%', color: '#10B981' }   // Green (excellent)
+        ];
+
+        colorStops.forEach(stop => {
+            gradient.append('stop')
+                .attr('offset', stop.offset)
+                .attr('stop-color', stop.color);
+        });
+
+        // Legend rectangle (horizontal)
+        legendGroup.append('rect')
+            .attr('width', 200)
+            .attr('height', 15)
+            .style('fill', 'url(#heatmap-gradient)');
+
+        // Legend scale labels (horizontal)
+        const scaleLabels = [
+            { value: '0%', x: 0 },
+            { value: '30%', x: 100 },
+            { value: '60%+', x: 200 }
+        ];
+
+        scaleLabels.forEach(label => {
+            legendGroup.append('text')
+                .attr('x', label.x)
+                .attr('y', 28)
+                .style('font-size', '10px')
+                .style('fill', '#A0A0A8')
+                .style('text-anchor', label.x === 0 ? 'start' : (label.x === 200 ? 'end' : 'middle'))
+                .text(label.value);
+        });
+
+        // Size legend - positioned horizontally in the bottom goal zone (last 90 pixels)
+        const sizeLegendGroup = svg.append('g')
+            .attr('class', 'size-legend')
+            .attr('transform', `translate(${margin.left + 150}, ${margin.top + height - 60})`);
+
+        sizeLegendGroup.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .style('fill', '#E5E5E7')
+            .text('Shot Frequency');
+
+        // Example hexagons for size (horizontal layout)
+        const hexbin = d3.hexbin().radius(10);
+        const sizeExamples = [
+            { shots: 1, scale: 0.5 },
+            { shots: 5, scale: 0.8 },
+            { shots: 10, scale: 1.2 }
+        ];
+
+        sizeExamples.forEach((example, i) => {
+            sizeLegendGroup.append('path')
+                .attr('d', hexbin.hexagon(10 * example.scale))
+                .attr('transform', `translate(${i * 70 + 15}, 10)`)
+                .style('fill', '#00D9FF')
+                .style('stroke', '#fff')
+                .style('stroke-width', 1)
+                .style('opacity', 0.5);
+
+            sizeLegendGroup.append('text')
+                .attr('x', i * 70 + 15)
+                .attr('y', 30)
+                .style('font-size', '10px')
+                .style('fill', '#A0A0A8')
+                .style('text-anchor', 'middle')
+                .text(`${example.shots}+`);
+        });
+    }
+
+    updateXGHistogramsWithPlayer(playerName) {
+        if (!this.currentGameData || !this.team1HistGroup || !this.team2HistGroup) {
+            return;
+        }
+
+        console.log(`Updating histograms with player overlay: ${playerName}`);
+
+        // Get player's shots
+        const playerShots = this.currentGameData.filter(d => d.shooter === playerName);
+
+        if (playerShots.length === 0) {
+            console.log(`No shots found for player: ${playerName}`);
+            return;
+        }
+
+        // Determine which team the player belongs to based on their shooting
+        const playerTeam = playerShots[0].shooting_team;
+
+        // Find shots against the player when they were defending
+        const shotsAgainstPlayer = this.currentGameData.filter(shot => {
+            // Check if the player was on the field for the opposing team
+            if (playerTeam === this.team1Name) {
+                // Player is from team1, check if they were defending against team2's shots
+                return shot.shooting_team === this.team2Name && (
+                    shot.t1lw === playerName ||
+                    shot.t1c === playerName ||
+                    shot.t1rw === playerName ||
+                    shot.t1ld === playerName ||
+                    shot.t1rd === playerName ||
+                    shot.t1g === playerName ||
+                    shot.t1x === playerName
+                );
+            } else {
+                // Player is from team2, check if they were defending against team1's shots
+                return shot.shooting_team === this.team1Name && (
+                    shot.t2lw === playerName ||
+                    shot.t2c === playerName ||
+                    shot.t2rw === playerName ||
+                    shot.t2ld === playerName ||
+                    shot.t2rd === playerName ||
+                    shot.t2g === playerName ||
+                    shot.t2x === playerName
+                );
+            }
+        });
+
+        console.log(`Found ${shotsAgainstPlayer.length} shots against ${playerName} when defending`);
+
+        // Update histograms
+        if (playerTeam === this.team1Name) {
+            // Player from team1: show their shots on top, shots against them on bottom
+            if (this.team1HistGroup) {
+                this.addPlayerOverlay(this.team1HistGroup, playerShots, playerName, 'offensive');
+            }
+            if (this.team2HistGroup && shotsAgainstPlayer.length > 0) {
+                this.addPlayerOverlay(this.team2HistGroup, shotsAgainstPlayer, playerName, 'defensive');
+            }
+        } else if (playerTeam === this.team2Name) {
+            // Player from team2: show their shots on bottom, shots against them on top
+            if (this.team2HistGroup) {
+                this.addPlayerOverlay(this.team2HistGroup, playerShots, playerName, 'offensive');
+            }
+            if (this.team1HistGroup && shotsAgainstPlayer.length > 0) {
+                this.addPlayerOverlay(this.team1HistGroup, shotsAgainstPlayer, playerName, 'defensive');
+            }
+        }
+    }
+
+    addPlayerOverlay(histGroup, playerShots, playerName, mode = 'offensive') {
+        // Remove any existing player overlay
+        histGroup.selectAll('.player-overlay').remove();
+
+        // Get stored histogram data
+        const histData = histGroup.datum();
+        if (!histData) return;
+
+        const { xScale, yScale, height, colorScale } = histData;
+
+        // Filter out invalid xG values (adjusted to 0.6 max)
+        const validPlayerShots = playerShots.filter(d => {
+            const xg = parseFloat(d.xg);
+            return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+        });
+
+        if (validPlayerShots.length === 0) return;
+
+        // Create player bins with stacked data
+        const binWidth = 0.05;
+        const thresholds = d3.range(0, 0.6 + binWidth, binWidth);
+        const resultTypes = ['Goal', 'Saved', 'Missed', 'Blocked'];
+
+        const playerBinnedData = thresholds.slice(0, -1).map((threshold, i) => {
+            const binShots = validPlayerShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return xg >= threshold && xg < thresholds[i + 1];
+            });
+
+            let y0 = 0;
+            const stacks = resultTypes.map(result => {
+                const count = binShots.filter(d => d.result === result).length;
+                const stack = {
+                    result: result,
+                    count: count,
+                    y0: y0,
+                    y1: y0 + count
+                };
+                y0 += count;
+                return stack;
+            });
+
+            return {
+                x0: threshold,
+                x1: thresholds[i + 1],
+                total: binShots.length,
+                stacks: stacks
+            };
+        });
+
+        // Create player overlay group
+        const playerOverlay = histGroup.append('g')
+            .attr('class', 'player-overlay');
+
+        // Draw player stacked bars with outline
+        playerBinnedData.forEach(bin => {
+            if (bin.total === 0) return;
+
+            const binGroup = playerOverlay.append('g')
+                .attr('transform', `translate(${xScale(bin.x0)}, 0)`);
+
+            // Draw outline rectangle first
+            binGroup.append('rect')
+                .attr('class', 'player-outline')
+                .attr('x', 0)
+                .attr('y', yScale(bin.total))
+                .attr('width', Math.max(0, xScale(bin.x1) - xScale(bin.x0) - 1))
+                .attr('height', yScale(0) - yScale(bin.total))
+                .style('fill', 'none')
+                .style('stroke', mode === 'offensive' ? '#E06B47' : '#444A87')
+                .style('stroke-width', 2);
+
+            // Draw stack segments
+            binGroup.selectAll('.player-stack')
+                .data(bin.stacks.filter(s => s.count > 0))
+                .enter().append('rect')
+                .attr('class', 'player-stack')
+                .attr('x', 1)
+                .attr('width', Math.max(0, xScale(bin.x1) - xScale(bin.x0) - 3))
+                .attr('y', d => yScale(d.y1))
+                .attr('height', d => yScale(d.y0) - yScale(d.y1))
+                .style('fill', d => colorScale(d.result))
+                .style('opacity', 1)
+                .style('stroke', '#fff')
+                .style('stroke-width', 0.5);
+        });
+
+        // Add player average line
+        const playerXgValues = validPlayerShots.map(d => parseFloat(d.xg));
+        const playerAvgXG = d3.mean(playerXgValues);
+        if (playerAvgXG) {
+            const lineColor = mode === 'offensive' ? '#E06B47' : '#444A87';
+
+            playerOverlay.append('line')
+                .attr('class', 'player-average-line')
+                .attr('x1', xScale(playerAvgXG))
+                .attr('x2', xScale(playerAvgXG))
+                .attr('y1', 0)
+                .attr('y2', height)
+                .style('stroke', lineColor)
+                .style('stroke-width', 3)
+                .style('stroke-dasharray', '3,3');
+
+            const labelText = mode === 'offensive'
+                ? `${playerName}: ${playerAvgXG.toFixed(3)}`
+                : `vs ${playerName}: ${playerAvgXG.toFixed(3)}`;
+
+            playerOverlay.append('text')
+                .attr('x', xScale(playerAvgXG))
+                .attr('y', -15)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '10px')
+                .style('fill', lineColor)
+                .style('font-weight', 'bold')
+                .text(labelText);
+        }
+
+        // Add player stats text
+        const statsText = mode === 'offensive'
+            ? `${playerName}: ${validPlayerShots.length} shots`
+            : `Shots vs ${playerName}: ${validPlayerShots.length}`;
+
+        playerOverlay.append('text')
+            .attr('x', xScale(0.3))
+            .attr('y', -25)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '11px')
+            .style('fill', '#E5E5E7')
+            .style('font-weight', 'bold')
+            .text(statsText);
+    }
+
+    clearPlayerOverlay() {
+        if (this.team1HistGroup) {
+            this.team1HistGroup.selectAll('.player-overlay').remove();
+        }
+        if (this.team2HistGroup) {
+            this.team2HistGroup.selectAll('.player-overlay').remove();
+        }
+    }
+
+    createXGHistograms(svg, data, fieldWidth, fieldHeight, margin) {
+        console.log('Creating xG histograms');
+        console.log('Current game ID:', this.currentGameId);
+
+        // Get unique teams
+        const teams = [...new Set(data.map(d => d.team1))].concat([...new Set(data.map(d => d.team2))]);
+        const uniqueTeams = [...new Set(teams)].filter(t => t); // Remove nulls/undefined
+
+        if (uniqueTeams.length === 0) {
+            console.log('No teams found for histogram');
+            return;
+        }
+
+        let team1, team2, team1Shots, team2Shots;
+
+        if (this.currentGameId === 'all') {
+            // For "All Games" view, show all shots in both histograms
+            team1 = 'All Shots';
+            team2 = 'All Shots';
+            team1Shots = data;
+            team2Shots = data;
+        } else {
+            // For individual games, separate by team
+            team1 = uniqueTeams[0];
+            team2 = uniqueTeams.length > 1 ? uniqueTeams[1] : team1;
+            team1Shots = data.filter(d => d.shooting_team === team1);
+            team2Shots = data.filter(d => d.shooting_team === team2);
+        }
+
+        // Position for histograms (right side of field)
+        const histogramX = fieldWidth + margin.left + 20;
+        const histogramWidth = 200;
+        const histogramHeight = ((fieldHeight - 100) / 2) / 3;
+
+        // Create histogram for Team 1 (upper half)
+        const team1HistGroup = svg.append('g')
+            .attr('class', 'xg-histogram-team1')
+            .attr('transform', `translate(${histogramX}, ${margin.top + 20})`);
+
+        this.drawXGHistogram(team1HistGroup, team1Shots, histogramWidth, histogramHeight, team1, 'team1');
+
+        // Create histogram for Team 2 (lower half)
+        const team2HistGroup = svg.append('g')
+            .attr('class', 'xg-histogram-team2')
+            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100})`);
+
+        this.drawXGHistogram(team2HistGroup, team2Shots, histogramWidth, histogramHeight, team2, 'team2');
+
+        // Store references for updating with player overlay
+        this.team1HistGroup = team1HistGroup;
+        this.team2HistGroup = team2HistGroup;
+        this.team1Name = team1;
+        this.team2Name = team2;
+        this.histogramWidth = histogramWidth;
+        this.histogramHeight = histogramHeight;
+    }
+
+    drawXGHistogram(group, shots, width, height, teamName, teamClass) {
+        // Filter out invalid xG values (xG goes up to 0.6)
+        const validShots = shots.filter(d => {
+            const xg = parseFloat(d.xg);
+            return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+        });
+
+        if (validShots.length === 0) {
+            group.append('text')
+                .attr('x', width / 2)
+                .attr('y', height / 2)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .style('fill', '#999')
+                .text('No xG data available');
+            return;
+        }
+
+        // Title
+        group.append('text')
+            .attr('x', width / 2)
+            .attr('y', -5)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .style('fill', '#E5E5E7')
+            .text('xG Distribution');
+
+        // Create bins and calculate stacked data
+        const binWidth = 0.05;
+        const thresholds = d3.range(0, 0.6 + binWidth, binWidth);
+        const resultTypes = ['Goal', 'Saved', 'Missed', 'Blocked'];
+
+        // Color scale for result types (updated for dark theme)
+        const colorScale = d3.scaleOrdinal()
+            .domain(resultTypes)
+            .range(['#10B981', '#00D9FF', '#F59E0B', '#EF4444']);
+
+        // Bin the data and calculate stacks
+        const binnedData = thresholds.slice(0, -1).map((threshold, i) => {
+            const binShots = validShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return xg >= threshold && xg < thresholds[i + 1];
+            });
+
+            const resultCounts = {};
+            let y0 = 0;
+
+            const stacks = resultTypes.map(result => {
+                const count = binShots.filter(d => d.result === result).length;
+                resultCounts[result] = count;
+                const stack = {
+                    result: result,
+                    count: count,
+                    y0: y0,
+                    y1: y0 + count
+                };
+                y0 += count;
+                return stack;
+            });
+
+            return {
+                x0: threshold,
+                x1: thresholds[i + 1],
+                total: binShots.length,
+                shots: binShots,
+                stacks: stacks,
+                resultCounts: resultCounts
+            };
+        });
+
+        // Scales
+        const x = d3.scaleLinear()
+            .domain([0, 0.6])
+            .range([0, width]);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(binnedData, d => d.total)])
+            .nice()
+            .range([height, 0]);
+
+        // Draw stacked bars
+        const barGroup = group.append('g').attr('class', 'histogram-bars');
+
+        binnedData.forEach(bin => {
+            const binGroup = barGroup.append('g')
+                .attr('class', 'bin-group')
+                .attr('transform', `translate(${x(bin.x0)}, 0)`);
+
+            // Draw each stack segment
+            binGroup.selectAll('.stack-segment')
+                .data(bin.stacks.filter(s => s.count > 0))
+                .enter().append('rect')
+                .attr('class', d => `stack-segment result-${d.result.toLowerCase()}`)
+                .attr('x', 0)
+                .attr('width', Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+                .attr('y', d => y(d.y1))
+                .attr('height', d => y(d.y0) - y(d.y1))
+                .style('fill', d => colorScale(d.result))
+                .style('opacity', 0.8)
+                .style('stroke', '#fff')
+                .style('stroke-width', 0.5)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    binGroup.selectAll('.stack-segment')
+                        .style('opacity', 0.95);
+                })
+                .on('mouseout', function() {
+                    binGroup.selectAll('.stack-segment')
+                        .style('opacity', 0.8);
+                })
+                .append('title')
+                .text(d => {
+                    const tooltip = `xG: ${bin.x0.toFixed(2)}-${bin.x1.toFixed(2)}\n` +
+                        `Total: ${bin.total} shots\n` +
+                        `Goals: ${bin.resultCounts['Goal'] || 0}\n` +
+                        `Saved: ${bin.resultCounts['Saved'] || 0}\n` +
+                        `Missed: ${bin.resultCounts['Missed'] || 0}\n` +
+                        `Blocked: ${bin.resultCounts['Blocked'] || 0}`;
+                    return tooltip;
+                });
+        });
+
+        // Add x-axis
+        group.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x)
+                .tickValues([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+                .tickFormat(d => d.toFixed(1)));
+
+        // Add y-axis
+        group.append('g')
+            .call(d3.axisLeft(y).ticks(5));
+
+        // Add axis labels
+        group.append('text')
+            .attr('transform', `translate(${width / 2}, ${height + 35})`)
+            .style('text-anchor', 'middle')
+            .style('font-size', '11px')
+            .style('fill', '#A0A0A8')
+            .text('xG Value');
+
+        group.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -30)
+            .attr('x', -height / 2)
+            .style('text-anchor', 'middle')
+            .style('font-size', '11px')
+            .style('fill', '#A0A0A8')
+            .text('Number of Shots');
+
+        // Add average line
+        const xgValues = validShots.map(d => parseFloat(d.xg));
+        const avgXG = d3.mean(xgValues);
+        if (avgXG) {
+            group.append('line')
+                .attr('class', 'average-line')
+                .attr('x1', x(avgXG))
+                .attr('x2', x(avgXG))
+                .attr('y1', 0)
+                .attr('y2', height)
+                .style('stroke', '#A0A0A8')
+                .style('stroke-width', 2)
+                .style('stroke-dasharray', '5,5');
+
+            group.append('text')
+                .attr('x', x(avgXG))
+                .attr('y', -2)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '10px')
+                .style('fill', '#A0A0A8')
+                .text(`Avg: ${avgXG.toFixed(3)}`);
+        }
+
+        // Add result type legend (horizontal below the chart)
+        const legendGroup = group.append('g')
+            .attr('class', 'result-legend')
+            .attr('transform', `translate(0, ${height + 45})`);
+
+        resultTypes.forEach((result, i) => {
+            const legendItem = legendGroup.append('g')
+                .attr('transform', `translate(${i * 45}, 0)`);
+
+            legendItem.append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', 10)
+                .attr('height', 10)
+                .style('fill', colorScale(result))
+                .style('opacity', 0.8);
+
+            legendItem.append('text')
+                .attr('x', 12)
+                .attr('y', 8)
+                .style('font-size', '9px')
+                .style('fill', '#A0A0A8')
+                .text(result);
+        });
+
+        // Store data for player overlay
+        group.datum({
+            teamName: teamName,
+            binnedData: binnedData,
+            xScale: x,
+            yScale: y,
+            height: height,
+            totalShots: validShots,
+            colorScale: colorScale
+        });
+    }
+
     addShotMapLegend(svg, width, height, margin, colorScale) {
         const legendWidth = 200;
         const legendHeight = 20;
@@ -1749,15 +2633,29 @@ class FloorballApp {
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM LOADED - STARTING APP ===');
-    
+
     // Check if required libraries are loaded
     console.log('D3 available:', typeof d3 !== 'undefined');
     console.log('D3.hexbin available:', typeof d3.hexbin !== 'undefined');
     console.log('SQL.js available:', typeof window.initSqlJs !== 'undefined');
-    
-    debugLog('DOM LOADED - Starting app creation', {
+
+    // Detailed d3-hexbin check
+    if (typeof d3 !== 'undefined' && typeof d3.hexbin === 'undefined') {
+        console.error('WARNING: d3-hexbin is NOT loaded! Heatmap will not work.');
+        console.log('Attempting to verify d3-hexbin script tag...');
+        const hexbinScript = document.querySelector('script[src*="d3-hexbin"]');
+        if (hexbinScript) {
+            console.log('d3-hexbin script tag found:', hexbinScript.src);
+            console.log('Script loading may have failed or is still pending.');
+        } else {
+            console.log('No d3-hexbin script tag found in document!');
+        }
+    }
+
+    debugLog('DOM LOADED - Library check', {
         d3Available: typeof d3 !== 'undefined',
-        hexbinAvailable: typeof d3.hexbin !== 'undefined', 
+        hexbinAvailable: typeof d3.hexbin !== 'undefined',
+        d3Version: typeof d3 !== 'undefined' ? d3.version : 'not loaded',
         sqlJsAvailable: typeof window.initSqlJs !== 'undefined'
     });
     
