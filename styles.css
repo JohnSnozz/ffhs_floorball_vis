@@ -580,3 +580,278 @@ main {
 .shot-map-legend text {
     fill: #A0A0A8;
 }
+
+.corrections-section {
+    padding: 20px;
+}
+
+.corrections-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #1e2128;
+    border-radius: 8px;
+}
+
+.corrections-info {
+    color: #A0A0A8;
+    font-size: 14px;
+}
+
+.corrections-table-container {
+    overflow-x: auto;
+    overflow-y: visible;
+    background: #1e2128;
+    border-radius: 8px;
+    padding: 15px;
+    max-width: 100%;
+}
+
+.corrections-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.corrections-table th,
+.corrections-table td {
+    padding: 4px 3px;
+    text-align: center;
+    border-bottom: 1px solid #2a2d35;
+    border-right: 1px solid #2a2d35;
+}
+
+.corrections-table th {
+    background: #252830;
+    color: #A0A0A8;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    height: 120px;
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 8px 4px;
+}
+
+.corrections-table th:first-child,
+.corrections-table th:last-child {
+    writing-mode: horizontal-tb;
+    height: auto;
+}
+
+.corrections-table tr:hover {
+    background: #252830;
+}
+
+.corrections-table tr.has-correction {
+    background: rgba(74, 157, 156, 0.1);
+}
+
+.corrections-table tr.has-correction:hover {
+    background: rgba(74, 157, 156, 0.15);
+}
+
+.corrections-table .edit-field {
+    width: 100%;
+    padding: 2px 4px;
+    background: #2a2d35;
+    border: 1px solid #3a3d45;
+    border-radius: 3px;
+    color: #e0e0e8;
+    font-size: 10px;
+}
+
+.corrections-table .edit-field:focus {
+    outline: none;
+    border-color: #4a9d9c;
+}
+
+.save-correction-btn,
+.delete-correction-btn {
+    padding: 3px 8px;
+    margin: 2px;
+    font-size: 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: block;
+    width: 100%;
+}
+
+.save-correction-btn {
+    background: #4a9d9c;
+    color: white;
+}
+
+.save-correction-btn:hover {
+    background: #5cb8b7;
+}
+
+.delete-correction-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.delete-correction-btn:hover {
+    background: #c82333;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #A0A0A8;
+}
+
+.empty-state.error {
+    color: #dc3545;
+}
+
+.controls-wrapper {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.sorting-controls {
+    padding: 10px;
+    background: #252830;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.sorting-controls label {
+    color: #A0A0A8;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sorting-controls select {
+    padding: 5px 10px;
+    background: #2a2d35;
+    border: 1px solid #3a3d45;
+    border-radius: 4px;
+    color: #e0e0e8;
+    font-size: 12px;
+}
+
+.filter-controls {
+    padding: 10px;
+    background: #252830;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+}
+
+.filter-controls > label {
+    color: #A0A0A8;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.filter-group label {
+    color: #A0A0A8;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.filter-group select {
+    padding: 3px 6px;
+    background: #2a2d35;
+    border: 1px solid #3a3d45;
+    border-radius: 3px;
+    color: #e0e0e8;
+    font-size: 11px;
+    min-width: 80px;
+}
+
+.filter-group select[multiple] {
+    min-height: 60px;
+}
+
+.sort-btn {
+    padding: 5px 12px;
+    background: #4a9d9c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.sort-btn:hover {
+    background: #5cb8b7;
+}
+
+#apply-filters,
+#clear-filters {
+    align-self: flex-end;
+    margin-bottom: 3px;
+}
+
+.corrections-table .time-field {
+    width: 50px;
+    min-width: 50px;
+}
+
+.corrections-table .team-dropdown {
+    min-width: 90px;
+    max-width: 120px;
+}
+
+.corrections-table .player-dropdown {
+    min-width: 90px;
+    max-width: 110px;
+}
+
+.corrections-table .checkbox-field {
+    width: 15px;
+    height: 15px;
+    margin: 0 auto;
+    display: block;
+    cursor: pointer;
+}
+
+.corrections-table .result-goal {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4CAF50;
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.corrections-table td:first-child {
+    font-size: 10px;
+    font-weight: 600;
+    color: #A0A0A8;
+}
+
+.corrections-table td:last-child {
+    min-width: 70px;
+    padding: 2px;
+}
+
+.corrections-table select[data-field="result"],
+.corrections-table select[data-field="type"] {
+    min-width: 70px;
+    max-width: 90px;
+}
