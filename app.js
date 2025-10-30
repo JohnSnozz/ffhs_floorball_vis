@@ -1135,9 +1135,12 @@ class FloorballApp {
             .map(opt => opt.value)
             .filter(v => v !== '');
 
+        // Store selected shooter for special histogram/map handling
+        this.selectedShooter = selectedShooters.length === 1 ? selectedShooters[0] : null;
+
         let filteredData = this.currentGameData;
 
-        // Apply shooter filter
+        // Apply shooter filter (only for shots by this player)
         if (selectedShooters.length > 0) {
             filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
         }
@@ -1199,7 +1202,204 @@ class FloorballApp {
 
 
     async createCharts(data) {
-        await this.createShotMap(data);
+        console.log('=== createCharts called ===');
+        console.log('Data passed to createCharts:', data.length, 'shots');
+        console.log('currentGameData contains:', this.currentGameData?.length, 'shots');
+        console.log('selectedShooter:', this.selectedShooter);
+
+        // Check teams in currentGameData
+        if (this.currentGameData) {
+            const teams = new Set(this.currentGameData.map(d => d.shooting_team));
+            console.log('Teams in currentGameData:', Array.from(teams));
+        }
+
+        // Calculate "on field" data if shooter is selected
+        let onFieldData = null;
+        if (this.selectedShooter) {
+            // IMPORTANT: Use currentGameData (all shots) not 'data' (filtered for shooter)
+            // Get the team names properly
+            const team1Name = this.currentGameData[0]?.team1;
+            const team2Name = this.currentGameData[0]?.team2;
+
+            // For opponent shots, we need ALL shots from the game, not just the selected shooter's shots
+            onFieldData = this.currentGameData.filter(d => {
+                const playerName = this.selectedShooter;
+                // For opponent shots: shooting team is NOT team1
+                const isOpponentShot = d.shooting_team && d.shooting_team !== team1Name;
+                const playerOnField = d.t1lw === playerName ||
+                                     d.t1c === playerName ||
+                                     d.t1rw === playerName ||
+                                     d.t1ld === playerName ||
+                                     d.t1rd === playerName ||
+                                     d.t1g === playerName ||
+                                     d.t1x === playerName;
+
+                return isOpponentShot && playerOnField;
+            });
+
+            console.log(`On-field filtering for ${this.selectedShooter}:`);
+            console.log(`- Total shots in currentGameData: ${this.currentGameData.length}`);
+
+            // Check what teams are in currentGameData
+            const allShootingTeams = new Set(this.currentGameData.map(d => d.shooting_team));
+            console.log(`- All shooting teams in currentGameData:`, Array.from(allShootingTeams));
+
+            const opponentShots = this.currentGameData.filter(d => d.shooting_team !== team1Name);
+            console.log(`- Total opponent shots (shooting_team != ${team1Name}): ${opponentShots.length}`);
+            console.log(`- Opponent shots when ${this.selectedShooter} on field: ${onFieldData.length}`);
+
+            // Detailed verification for debugging
+            if (this.selectedShooter === '#27 Griezitis') {
+                // Run direct SQL queries to check the actual database
+                console.log('=== DIRECT DATABASE CHECK ===');
+
+                // Query 1: Total shots in database
+                const totalShots = this.db.exec(`SELECT COUNT(*) as count FROM shots`);
+                console.log('Total shots in database:', totalShots[0]?.values[0][0]);
+
+                // Query 2: Shots by team
+                const shotsByTeam = this.db.exec(`
+                    SELECT shooting_team, COUNT(*) as count
+                    FROM shots
+                    GROUP BY shooting_team
+                `);
+                console.log('Shots by team:');
+                shotsByTeam[0]?.values.forEach(row => {
+                    console.log(`  ${row[0]}: ${row[1]} shots`);
+                });
+
+                // Query 3: Griezitis on field for opponent shots (matching your SQL)
+                const griezitisOpponentShots = this.db.exec(`
+                    SELECT COUNT(*) as count
+                    FROM shots
+                    WHERE team2 = shooting_team
+                    AND (t1lw LIKE '%#27 Griezitis%'
+                        OR t1c LIKE '%#27 Griezitis%'
+                        OR t1rw LIKE '%#27 Griezitis%'
+                        OR t1ld LIKE '%#27 Griezitis%'
+                        OR t1rd LIKE '%#27 Griezitis%'
+                        OR t1g LIKE '%#27 Griezitis%'
+                        OR t1x LIKE '%#27 Griezitis%')
+                `);
+                console.log('Griezitis on field for opponent shots (SQL):', griezitisOpponentShots[0]?.values[0][0]);
+
+                // Query 4: Griezitis on field for Team 1 shots
+                const griezitisTeamShots = this.db.exec(`
+                    SELECT COUNT(*) as count
+                    FROM shots
+                    WHERE team1 = shooting_team
+                    AND (t1lw LIKE '%#27 Griezitis%'
+                        OR t1c LIKE '%#27 Griezitis%'
+                        OR t1rw LIKE '%#27 Griezitis%'
+                        OR t1ld LIKE '%#27 Griezitis%'
+                        OR t1rd LIKE '%#27 Griezitis%'
+                        OR t1g LIKE '%#27 Griezitis%'
+                        OR t1x LIKE '%#27 Griezitis%')
+                `);
+                console.log('Griezitis on field for Team 1 shots (SQL):', griezitisTeamShots[0]?.values[0][0]);
+
+                // Query 5: Check team structure
+                const teamStructure = this.db.exec(`
+                    SELECT DISTINCT team1, team2, shooting_team
+                    FROM shots
+                    LIMIT 5
+                `);
+                console.log('Sample team structures:');
+                teamStructure[0]?.values.forEach(row => {
+                    console.log(`  team1="${row[0]}", team2="${row[1]}", shooting="${row[2]}"`);
+                });
+
+                // Now check the JavaScript data
+                console.log('=== JAVASCRIPT DATA CHECK ===');
+                const sample = this.currentGameData[0];
+                console.log('Sample shot:', {
+                    team1: sample.team1,
+                    team2: sample.team2,
+                    shooting_team: sample.shooting_team
+                });
+
+                // Check how many shots have team2 defined
+                const shotsWithTeam2 = this.currentGameData.filter(d => d.team2).length;
+                console.log(`Shots with team2 defined: ${shotsWithTeam2} of ${this.currentGameData.length}`);
+
+                // Get all unique shooting teams
+                const shootingTeams = new Set(this.currentGameData.map(d => d.shooting_team));
+                console.log('All shooting teams:', Array.from(shootingTeams));
+
+                const totalOpponentShots = this.currentGameData.filter(d => d.shooting_team !== team1Name).length;
+                const playerPositions = ['t1lw', 't1c', 't1rw', 't1ld', 't1rd', 't1g', 't1x'];
+
+                // Count OPPONENT shots where Griezitis appears in each position
+                const opponentShotsPerPosition = {};
+                playerPositions.forEach(pos => {
+                    const count = this.currentGameData.filter(d =>
+                        d.shooting_team !== team1Name && d[pos] === '#27 Griezitis'
+                    ).length;
+                    if (count > 0) opponentShotsPerPosition[pos] = count;
+                });
+
+                // Check for duplicate counting - is he in multiple positions for same shot?
+                const shotsWithMultiplePositions = onFieldData.filter(shot => {
+                    let count = 0;
+                    playerPositions.forEach(pos => {
+                        if (shot[pos] === '#27 Griezitis') count++;
+                    });
+                    return count > 1;
+                });
+
+                console.log(`VERIFICATION for #27 Griezitis:`);
+                console.log(`- Team 1 name: ${team1Name}`);
+                console.log(`- Team 2 name: ${team2Name}`);
+                console.log(`- Total shots in dataset: ${this.currentGameData.length}`);
+
+                // Check different filtering approaches
+                const method1 = this.currentGameData.filter(d =>
+                    d.team2 === d.shooting_team &&
+                    (d.t1lw === '#27 Griezitis' || d.t1c === '#27 Griezitis' ||
+                     d.t1rw === '#27 Griezitis' || d.t1ld === '#27 Griezitis' ||
+                     d.t1rd === '#27 Griezitis' || d.t1g === '#27 Griezitis' ||
+                     d.t1x === '#27 Griezitis')
+                ).length;
+
+                const method2 = this.currentGameData.filter(d =>
+                    d.shooting_team !== d.team1 &&
+                    (d.t1lw === '#27 Griezitis' || d.t1c === '#27 Griezitis' ||
+                     d.t1rw === '#27 Griezitis' || d.t1ld === '#27 Griezitis' ||
+                     d.t1rd === '#27 Griezitis' || d.t1g === '#27 Griezitis' ||
+                     d.t1x === '#27 Griezitis')
+                ).length;
+
+                // Check what teams exist in the data
+                const uniqueTeamCombos = new Set();
+                this.currentGameData.forEach(d => {
+                    uniqueTeamCombos.add(`team1=${d.team1}, team2=${d.team2}, shooting=${d.shooting_team}`);
+                });
+
+                console.log(`- Method 1 (team2 = shooting_team): ${method1}`);
+                console.log(`- Method 2 (shooting_team != team1): ${method2}`);
+                console.log(`- Current filter result: ${onFieldData.length}`);
+                console.log(`- Unique team combinations (first 5):`);
+                Array.from(uniqueTeamCombos).slice(0, 5).forEach(combo => console.log(`    ${combo}`));
+                console.log(`- Opponent shots by position where Griezitis appears:`, opponentShotsPerPosition);
+                console.log(`- Shots where Griezitis in MULTIPLE positions: ${shotsWithMultiplePositions.length}`);
+
+                // SQL equivalent check
+                const sqlLikeCount = this.currentGameData.filter(d =>
+                    d.shooting_team !== team1Name &&
+                    (d.t1lw === '#27 Griezitis' || d.t1c === '#27 Griezitis' ||
+                     d.t1rw === '#27 Griezitis' || d.t1ld === '#27 Griezitis' ||
+                     d.t1rd === '#27 Griezitis' || d.t1g === '#27 Griezitis' ||
+                     d.t1x === '#27 Griezitis')
+                ).length;
+                console.log(`- Count using SQL-like logic: ${sqlLikeCount}`);
+                console.log(`- Count from filter (onFieldData): ${onFieldData.length}`);
+
+                // Show actual team names to verify
+                const teams = new Set(this.currentGameData.map(d => d.shooting_team));
+                console.log(`- All teams in dataset:`, Array.from(teams));
+            }
+        }
+        await this.createShotMap(data, onFieldData);
     }
 
     createShotResultsChart(data) {
@@ -1399,37 +1599,76 @@ class FloorballApp {
             .call(d3.axisLeft(y));
     }
 
-    async createShotMap(data) {
+    async createShotMap(data, onFieldData = null) {
         console.log('Creating shot map...');
-        await debugLog('Creating shot map', { dataLength: data.length });
+        await debugLog('Creating shot map', { dataLength: data.length, hasOnFieldData: !!onFieldData });
+
+        // Initialize comprehensive hexbin tracking system
+        if (!window.hexbinTracking) {
+            window.hexbinTracking = {
+                allShooters: null,
+                selectedShooter: null,
+                comparisons: []
+            };
+        }
+
+        // Store hexbin debug data globally for comparison
+        if (!window.hexbinDebugData) {
+            window.hexbinDebugData = {};
+        }
 
         const container = d3.select('#shot-map-chart');
         container.selectAll('*').remove();
 
-        // Filter out Possession shots
+        // Filter out Possession shots from main data
         const filteredData = data.filter(shot => {
             const result = shot.result || '';
             return !result.toLowerCase().includes('possession');
         });
 
+        // Filter out Possession shots from onField data if it exists
+        const filteredOnFieldData = onFieldData ? onFieldData.filter(shot => {
+            const result = shot.result || '';
+            return !result.toLowerCase().includes('possession');
+        }) : null;
+
         console.log(`Filtered shots: ${filteredData.length} (excluded ${data.length - filteredData.length} possession shots)`);
+        if (filteredOnFieldData) {
+            console.log(`Filtered on-field shots: ${filteredOnFieldData.length}`);
+        }
         await debugLog('Shot map filter', {
             total: data.length,
             filtered: filteredData.length,
-            excluded: data.length - filteredData.length
+            excluded: data.length - filteredData.length,
+            onFieldTotal: onFieldData ? onFieldData.length : 0
         });
 
-        // Use the field image dimensions
-        // The field.png image and our x_graph/y_graph coordinates should match
-        const fieldWidth = 600;  // Width of field.png
-        const fieldHeight = 1200; // Height of field.png
+        // Calculate grid cell dimensions based on dashboard-main area
+        const dashboardMain = document.querySelector('.dashboard-main');
+        const dashboardRect = dashboardMain.getBoundingClientRect();
+        const cellWidth = dashboardRect.width / 15;
+        const cellHeight = dashboardRect.height / 10;
 
-        const margin = {top: 20, right: 250, bottom: 40, left: 20};
+        // Map should span 8 cells vertically (A1 to H1), width calculated for 1:2 aspect ratio
+        // Original field dimensions: 600x1200 (1:2 aspect ratio)
+        // Increase by 1/7 to fill 8 cells properly (was 7, now 8)
+        const fieldHeight = (cellHeight * 8) * (8/7); // 8 rows tall, increased by 1/7
+        const fieldWidth = fieldHeight / 2; // Maintain 1:2 aspect ratio (half the height)
+
+        // Total SVG width includes field + legend space
+        const legendWidth = cellWidth * 2; // 2 columns for legend
+        const totalSVGWidth = dashboardRect.width;
+        const totalSVGHeight = dashboardRect.height;
+
+        const margin = {top: 10, right: 10, bottom: 10, left: 10};
 
         const svg = container
             .append('svg')
-            .attr('width', fieldWidth + margin.left + margin.right)
-            .attr('height', fieldHeight + margin.top + margin.bottom);
+            .attr('width', totalSVGWidth)
+            .attr('height', totalSVGHeight)
+            .style('position', 'absolute')
+            .style('top', '0')
+            .style('left', '0');
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
@@ -1457,6 +1696,10 @@ class FloorballApp {
             .attr('height', fieldHeight)
             .style('opacity', 0.9);
 
+        // Calculate scale factor for coordinates (original field: 600x1200)
+        const scaleX = fieldWidth / 600;
+        const scaleY = fieldHeight / 1200;
+
         // Filter shots that have valid coordinates and add visual coordinates
         const shotsWithCoords = filteredData.filter(shot => {
             const x = parseFloat(shot.x_graph);
@@ -1471,13 +1714,13 @@ class FloorballApp {
             let visualX, visualY;
 
             if (isTeam1) {
-                // Team 1 shoots as-is
-                visualX = parseFloat(shot.x_graph);
-                visualY = parseFloat(shot.y_graph);
+                // Team 1 shoots as-is, scaled to new dimensions
+                visualX = parseFloat(shot.x_graph) * scaleX;
+                visualY = parseFloat(shot.y_graph) * scaleY;
             } else {
-                // Team 2 shoots flipped
-                visualX = 600 - parseFloat(shot.x_graph);
-                visualY = 1200 - parseFloat(shot.y_graph);
+                // Team 2 shoots flipped, scaled to new dimensions
+                visualX = (600 - parseFloat(shot.x_graph)) * scaleX;
+                visualY = (1200 - parseFloat(shot.y_graph)) * scaleY;
             }
 
             return {
@@ -1513,12 +1756,93 @@ class FloorballApp {
             return;
         }
 
+        // If onFieldData exists, we need to process it and create separate hexbins
+        let onFieldShotsWithCoords = null;
+        if (filteredOnFieldData) {
+            onFieldShotsWithCoords = filteredOnFieldData.filter(shot => {
+                const x = parseFloat(shot.x_graph);
+                const y = parseFloat(shot.y_graph);
+                return !isNaN(x) && !isNaN(y) && x >= 0 && y >= 0;
+            }).map(shot => {
+                const team1 = shot.team1;
+                const shootingTeam = shot.shooting_team;
+                const isTeam1 = shootingTeam === team1;
+
+                let visualX, visualY;
+
+                if (isTeam1) {
+                    visualX = parseFloat(shot.x_graph) * scaleX;
+                    visualY = parseFloat(shot.y_graph) * scaleY;
+                } else {
+                    visualX = (600 - parseFloat(shot.x_graph)) * scaleX;
+                    visualY = (1200 - parseFloat(shot.y_graph)) * scaleY;
+                }
+
+                return {
+                    ...shot,
+                    visualX: visualX,
+                    visualY: visualY,
+                    isTeam1: isTeam1
+                };
+            });
+            console.log(`On-field shots with coords: ${onFieldShotsWithCoords.length}`);
+        }
+
         // Create hexbin heatmap layer with clipping to prevent overflow
         const heatmapGroup = g.append('g')
-            .attr('class', 'heatmap-layer')
-            .attr('clip-path', 'url(#field-clip)');
-        if (shotsWithCoords.length > 0) {
-            this.createHexbinHeatmap(heatmapGroup, shotsWithCoords, fieldWidth, fieldHeight);
+            .attr('class', 'heatmap-layer');
+
+        if (onFieldShotsWithCoords) {
+            // When shooter is selected: show same hexbins but in split view
+            // Upper half: shooter's shots at ORIGINAL positions scaled to half size
+            // Lower half: on-field shots at ORIGINAL positions scaled to half size
+
+            // Create TWO separate SVG transforms to show the field twice at half scale
+            const upperGroup = heatmapGroup.append('g')
+                .attr('class', 'heatmap-upper')
+                .attr('clip-path', 'url(#upper-clip-path)');
+
+            const lowerGroup = heatmapGroup.append('g')
+                .attr('class', 'heatmap-lower')
+                .attr('clip-path', 'url(#lower-clip-path)');
+
+            // Create clipping paths for upper and lower halves
+            svg.select('defs').append('clipPath')
+                .attr('id', 'upper-clip-path')
+                .append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', fieldWidth)
+                .attr('height', fieldHeight / 2);
+
+            svg.select('defs').append('clipPath')
+                .attr('id', 'lower-clip-path')
+                .append('rect')
+                .attr('x', 0)
+                .attr('y', fieldHeight / 2)
+                .attr('width', fieldWidth)
+                .attr('height', fieldHeight / 2);
+
+            console.log(`Creating split hexbins:`);
+            console.log(`- Upper (shooter's shots): ${shotsWithCoords.length}`);
+            console.log(`- Lower (on-field shots): ${onFieldShotsWithCoords.length}`);
+
+            if (shotsWithCoords.length > 0) {
+                console.log('Drawing shooter hexbins in upper half...');
+                // Use original coordinates but display in upper half
+                this.createHexbinHeatmap(upperGroup, shotsWithCoords, fieldWidth, fieldHeight);
+            }
+            if (onFieldShotsWithCoords.length > 0) {
+                console.log('Drawing on-field hexbins in lower half...');
+                // Use original coordinates but display in lower half
+                this.createHexbinHeatmap(lowerGroup, onFieldShotsWithCoords, fieldWidth, fieldHeight);
+            }
+        } else {
+            // Normal mode: show all shots with field clipping
+            heatmapGroup.attr('clip-path', 'url(#field-clip)');
+            if (shotsWithCoords.length > 0) {
+                this.createHexbinHeatmap(heatmapGroup, shotsWithCoords, fieldWidth, fieldHeight);
+            }
         }
 
         // Create shot dots layer (hidden by default)
@@ -1826,7 +2150,7 @@ class FloorballApp {
     addSimpleShotMapLegend(svg, width, height, margin, colorScale) {
         const legend = svg.append('g')
             .attr('class', 'shot-map-legend')
-            .attr('transform', `translate(${margin.left + 20}, ${height + margin.top + 10})`);
+            .attr('transform', `translate(${margin.left + width + 20}, ${margin.top + 250})`);
 
         const legendData = [
             { result: 'Goal', label: 'Goal' },
@@ -1839,7 +2163,7 @@ class FloorballApp {
             .data(legendData)
             .enter().append('g')
             .attr('class', 'legend-item')
-            .attr('transform', (d, i) => `translate(${i * 120}, 0)`);
+            .attr('transform', (d, i) => `translate(0, ${i * 25})`);
 
         legendItems.append('circle')
             .attr('r', 5)
@@ -1853,8 +2177,678 @@ class FloorballApp {
             .attr('x', 12)
             .attr('y', 4)
             .text(d => d.label)
-            .style('font-size', '14px')
-            .style('fill', '#333');
+            .style('font-size', '12px')
+            .style('fill', '#E5E5E7');
+    }
+
+    createSplitViewHexbins(group, shotsWithCoords, fieldWidth, fieldHeight, position) {
+        // Create hexbins for split view (upper or lower half)
+        console.log(`createSplitViewHexbins: ${position} with ${shotsWithCoords.length} shots`);
+
+        if (!d3.hexbin) {
+            console.warn('d3-hexbin not available');
+            return;
+        }
+
+        // For split view, we need to:
+        // 1. Remap Y coordinates to compress into half the space
+        // 2. Adjust hexbin radius for the compressed space
+        // 3. Maintain aspect ratio of hexagons
+
+        const halfHeight = fieldHeight / 2;
+
+        // Remap shot coordinates based on position
+        // IMPORTANT: We want to map the ACTUAL range of shots to the full half, not compress the entire field
+        const remappedShots = shotsWithCoords.map(shot => {
+            let newY;
+            if (position === 'upper') {
+                // For upper half: scale Y linearly to fit 0 to halfHeight
+                // This keeps the relative positions but scales to fill the space
+                newY = (shot.visualY / fieldHeight) * halfHeight;
+            } else {
+                // For lower half: scale Y and shift to lower half
+                newY = ((shot.visualY / fieldHeight) * halfHeight) + halfHeight;
+            }
+
+            return {
+                ...shot,
+                remappedY: newY,
+                originalY: shot.visualY // Keep original for debugging
+            };
+        });
+
+        // Log sample coordinates for debugging
+        if (remappedShots.length > 0) {
+            console.log(`${position} shots coordinate sample:`, {
+                first: {
+                    x: remappedShots[0].visualX.toFixed(1),
+                    originalY: remappedShots[0].originalY.toFixed(1),
+                    remappedY: remappedShots[0].remappedY.toFixed(1),
+                    shooter: remappedShots[0].shooter
+                },
+                fieldHeight: fieldHeight,
+                halfHeight: halfHeight
+            });
+        }
+
+        // Create hexbin with adjusted parameters for compressed space
+        const scaleFactor = fieldWidth / 600;
+        // Use smaller radius for compressed view
+        const baseRadius = 20; // Smaller than normal 28
+        const hexbin = d3.hexbin()
+            .x(d => d.visualX)
+            .y(d => d.remappedY)
+            .radius(baseRadius * scaleFactor)
+            .extent([[0, position === 'upper' ? 0 : halfHeight],
+                     [fieldWidth, position === 'upper' ? halfHeight : fieldHeight]]);
+
+        // Generate hexbin data
+        const hexData = hexbin(remappedShots).map(bin => {
+            const goals = bin.filter(d => d.result === 'Goal').length;
+            const total = bin.length;
+            const successRate = total > 0 ? goals / total : 0;
+            return {
+                ...bin,
+                goals: goals,
+                total: total,
+                successRate: successRate
+            };
+        });
+
+        // Filter out empty bins
+        const filteredHexData = hexData.filter(d => d.total >= 1);
+
+        // Calculate league average
+        const leagueAverage = remappedShots.filter(d => d.result === 'Goal').length / remappedShots.length;
+
+        // Color scale
+        const colorScale = d3.scaleLinear()
+            .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
+            .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+            .clamp(true);
+
+        // Size scale
+        const sizeScale = d3.scalePow()
+            .exponent(0.8)
+            .domain([0, d3.max(filteredHexData, d => d.total) || 1])
+            .range([0.4, 1.0]); // Smaller range for split view
+
+        // Tooltip
+        const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
+            ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
+            : d3.select('body').select('.heatmap-tooltip');
+
+        // Store hexbin data for debugging - fixed to not break on d.map
+        const hexbinDebugKey = `${position}_${this.selectedShooter || 'all'}`;
+        window.hexbinDebugData[hexbinDebugKey] = {
+            position: position,
+            shooter: this.selectedShooter || 'all',
+            radius: baseRadius * scaleFactor,
+            hexbins: filteredHexData.map(d => ({
+                x: d.x,
+                y: d.y,
+                total: d.total,
+                goals: d.goals,
+                scale: sizeScale(d.total)
+                // Removed the faulty d.map() call
+            }))
+        };
+
+        console.log(`Stored hexbin debug data for ${hexbinDebugKey}:`, {
+            numHexbins: filteredHexData.length,
+            radius: baseRadius * scaleFactor,
+            firstHexbin: filteredHexData[0] ? {
+                x: filteredHexData[0].x.toFixed(1),
+                y: filteredHexData[0].y.toFixed(1),
+                total: filteredHexData[0].total
+            } : null
+        });
+
+        // Draw hexagons
+        const hexagons = group.selectAll('.hexagon')
+            .data(filteredHexData)
+            .enter().append('g')
+            .attr('class', 'hexagon-group')
+            .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        hexagons.append('path')
+            .attr('class', 'hexagon')
+            .attr('d', hexbin.hexagon())
+            .attr('transform', d => `scale(${sizeScale(d.total)})`)
+            .style('fill', d => colorScale(d.successRate))
+            .style('stroke', '#fff')
+            .style('stroke-width', 1)
+            .style('opacity', 0.85)
+            .on('mouseover', function(event, d) {
+                d3.select(this)
+                    .style('opacity', 1)
+                    .style('stroke-width', 2);
+
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+
+                const percentage = (d.successRate * 100).toFixed(1);
+                tooltip.html(`
+                    <strong>${position === 'upper' ? 'Shooter' : 'On-field'} Zone</strong><br/>
+                    Shots: ${d.total}<br/>
+                    Goals: ${d.goals}<br/>
+                    Success Rate: ${percentage}%
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function(event, d) {
+                d3.select(this)
+                    .style('opacity', 0.85)
+                    .style('stroke-width', 1);
+
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
+
+        console.log(`Created ${hexagons.size()} hexagons for ${position} half`);
+
+        // Quick debug output
+        if (filteredHexData.length > 0) {
+            const sample = filteredHexData[0];
+            console.log(`${position} HEXBIN DEBUG: First hexbin at (${sample.x.toFixed(1)}, ${sample.y.toFixed(1)}), fieldHeight=${fieldHeight.toFixed(1)}, halfHeight=${halfHeight.toFixed(1)}`);
+
+            const yValues = filteredHexData.map(h => h.y);
+            console.log(`${position} Y-RANGE: ${Math.min(...yValues).toFixed(1)} to ${Math.max(...yValues).toFixed(1)}`);
+        }
+
+        // After creating hexbins for a selected shooter, compare with all shooters data
+        if (this.selectedShooter && window.hexbinDebugData['all_shooters_none']) {
+            this.compareHexbinData();
+        }
+    }
+
+    async compareHexbinData() {
+        const allShootersData = window.hexbinDebugData['all_shooters_none'];
+        const selectedUpperData = window.hexbinDebugData[`upper_${this.selectedShooter}`];
+        const selectedLowerData = window.hexbinDebugData[`lower_${this.selectedShooter}`];
+
+        if (!allShootersData || !selectedUpperData) {
+            await debugLog('Hexbin comparison - missing data', {
+                hasAllShooters: !!allShootersData,
+                hasSelectedUpper: !!selectedUpperData
+            });
+            return;
+        }
+
+        const logData = {
+            timestamp: new Date().toISOString(),
+            selectedShooter: this.selectedShooter,
+            allShootersMode: {
+                numHexbins: allShootersData.hexbins.length,
+                radius: allShootersData.radius,
+                fieldWidth: allShootersData.fieldWidth,
+                fieldHeight: allShootersData.fieldHeight,
+                hexbins: allShootersData.hexbins.slice(0, 10).map(h => ({
+                    x: h.x,
+                    y: h.y,
+                    total: h.total,
+                    goals: h.goals,
+                    scale: h.scale
+                }))
+            },
+            selectedUpperMode: {
+                numHexbins: selectedUpperData.hexbins.length,
+                radius: selectedUpperData.radius,
+                position: selectedUpperData.position,
+                hexbins: selectedUpperData.hexbins.slice(0, 10).map(h => ({
+                    x: h.x,
+                    y: h.y,
+                    total: h.total,
+                    goals: h.goals,
+                    scale: h.scale
+                }))
+            }
+        };
+
+        // Add lower data if available
+        if (selectedLowerData) {
+            logData.selectedLowerMode = {
+                numHexbins: selectedLowerData.hexbins.length,
+                radius: selectedLowerData.radius,
+                position: selectedLowerData.position,
+                hexbins: selectedLowerData.hexbins.slice(0, 10).map(h => ({
+                    x: h.x,
+                    y: h.y,
+                    total: h.total,
+                    goals: h.goals,
+                    scale: h.scale
+                }))
+            };
+        }
+
+        // Calculate Y ranges
+        const allYValues = allShootersData.hexbins.map(h => h.y);
+        const upperYValues = selectedUpperData.hexbins.map(h => h.y);
+
+        logData.yAxisAnalysis = {
+            allShooters: {
+                min: Math.min(...allYValues),
+                max: Math.max(...allYValues),
+                range: Math.max(...allYValues) - Math.min(...allYValues)
+            },
+            upperHalf: {
+                min: Math.min(...upperYValues),
+                max: Math.max(...upperYValues),
+                range: Math.max(...upperYValues) - Math.min(...upperYValues),
+                expectedMax: allShootersData.fieldHeight / 2
+            }
+        };
+
+        if (selectedLowerData && selectedLowerData.hexbins.length > 0) {
+            const lowerYValues = selectedLowerData.hexbins.map(h => h.y);
+            logData.yAxisAnalysis.lowerHalf = {
+                min: Math.min(...lowerYValues),
+                max: Math.max(...lowerYValues),
+                range: Math.max(...lowerYValues) - Math.min(...lowerYValues),
+                expectedMin: allShootersData.fieldHeight / 2,
+                expectedMax: allShootersData.fieldHeight
+            };
+        }
+
+        // Write to log file
+        try {
+            const response = await fetch('/api/debug-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'HEXBIN_COMPARISON',
+                    data: logData
+                })
+            });
+
+            if (response.ok) {
+                console.log('Hexbin comparison data written to log file');
+
+                // Also write a detailed analysis file
+                await this.writeHexbinAnalysisFile(logData);
+            }
+        } catch (error) {
+            console.error('Failed to write hexbin log:', error);
+        }
+    }
+
+    compareHexbinPositions() {
+        if (!window.hexbinTracking.allShooters || !window.hexbinTracking.selectedShooter) {
+            console.log('Missing tracking data for comparison');
+            return;
+        }
+
+        const allShooters = window.hexbinTracking.allShooters;
+        const selected = window.hexbinTracking.selectedShooter;
+
+        console.log('=' .repeat(80));
+        console.log('HEXBIN POSITION TRACKING BY SHOT ID');
+        console.log('=' .repeat(80));
+
+        // Also write to debug log
+        debugLog('HEXBIN_POSITION_TRACKING', {
+            mode: 'comparison_start',
+            allShootersCount: allShooters.hexbins.length,
+            selectedCount: selected.hexbins.length
+        });
+
+        // Build a map of shot ID to hexbin position for all shooters mode
+        const allShootersMap = new Map();
+        allShooters.hexbins.forEach(hexbin => {
+            if (hexbin.shotIds) {
+                hexbin.shotIds.forEach(shot => {
+                    allShootersMap.set(shot.id, {
+                        hexbinX: hexbin.x,
+                        hexbinY: hexbin.y,
+                        hexbinScale: hexbin.scale,
+                        shotX: shot.visualX,
+                        shotY: shot.visualY
+                    });
+                });
+            }
+        });
+
+        // Build a map for selected shooter mode
+        const selectedMap = new Map();
+        selected.hexbins.forEach(hexbin => {
+            if (hexbin.shotIds) {
+                hexbin.shotIds.forEach(shot => {
+                    selectedMap.set(shot.id, {
+                        hexbinX: hexbin.x,
+                        hexbinY: hexbin.y,
+                        hexbinScale: hexbin.scale,
+                        shotX: shot.visualX,
+                        shotY: shot.visualY
+                    });
+                });
+            }
+        });
+
+        // Find common shot IDs
+        const commonShotIds = [];
+        allShootersMap.forEach((value, key) => {
+            if (selectedMap.has(key)) {
+                commonShotIds.push(key);
+            }
+        });
+
+        console.log(`Found ${commonShotIds.length} common shots between modes`);
+
+        // Compare positions for common shots
+        const discrepancies = [];
+        const comparisonDetails = [];
+
+        commonShotIds.slice(0, 10).forEach(shotId => {
+            const allPos = allShootersMap.get(shotId);
+            const selPos = selectedMap.get(shotId);
+
+            const deltaX = Math.abs(allPos.hexbinX - selPos.hexbinX);
+            const deltaY = Math.abs(allPos.hexbinY - selPos.hexbinY);
+            const scaleRatio = allPos.hexbinScale / selPos.hexbinScale;
+
+            const comparison = {
+                shotId: shotId.substring(0, 50),
+                allShooters: {
+                    hexbinX: allPos.hexbinX,
+                    hexbinY: allPos.hexbinY,
+                    scale: allPos.hexbinScale
+                },
+                selected: {
+                    hexbinX: selPos.hexbinX,
+                    hexbinY: selPos.hexbinY,
+                    scale: selPos.hexbinScale
+                },
+                deltaX: deltaX,
+                deltaY: deltaY,
+                scaleRatio: scaleRatio
+            };
+
+            comparisonDetails.push(comparison);
+
+            if (deltaX > 0.1 || deltaY > 0.1) {
+                discrepancies.push({
+                    shotId: shotId,
+                    allShooters: allPos,
+                    selected: selPos,
+                    deltaX: deltaX,
+                    deltaY: deltaY,
+                    scaleRatio: scaleRatio
+                });
+            }
+
+            console.log(`Shot ${shotId.substring(0, 30)}...`);
+            console.log(`  All Shooters: Hexbin (${allPos.hexbinX.toFixed(1)}, ${allPos.hexbinY.toFixed(1)}), Scale: ${allPos.hexbinScale.toFixed(2)}`);
+            console.log(`  Selected:     Hexbin (${selPos.hexbinX.toFixed(1)}, ${selPos.hexbinY.toFixed(1)}), Scale: ${selPos.hexbinScale.toFixed(2)}`);
+            console.log(`  Delta:        X: ${deltaX.toFixed(1)}, Y: ${deltaY.toFixed(1)}, Scale Ratio: ${scaleRatio.toFixed(2)}`);
+        });
+
+        // Write comparison details to log
+        debugLog('HEXBIN_COMPARISON_DETAILS', {
+            totalCommonShots: commonShotIds.length,
+            samplesCompared: comparisonDetails.length,
+            comparisons: comparisonDetails,
+            discrepancyCount: discrepancies.length
+        });
+
+        if (discrepancies.length > 0) {
+            console.log('\nDISCREPANCIES FOUND:');
+            console.log(`${discrepancies.length} shots have different hexbin positions`);
+
+            // Calculate average discrepancy
+            const avgDeltaX = discrepancies.reduce((sum, d) => sum + d.deltaX, 0) / discrepancies.length;
+            const avgDeltaY = discrepancies.reduce((sum, d) => sum + d.deltaY, 0) / discrepancies.length;
+            console.log(`Average position difference: X: ${avgDeltaX.toFixed(1)}, Y: ${avgDeltaY.toFixed(1)}`);
+        }
+
+        // Write detailed log to file
+        this.writeHexbinTrackingLog({
+            allShooters: allShooters,
+            selected: selected,
+            commonShotIds: commonShotIds.slice(0, 20),
+            discrepancies: discrepancies,
+            analysis: {
+                totalCommonShots: commonShotIds.length,
+                totalDiscrepancies: discrepancies.length,
+                averageDeltaX: discrepancies.length > 0 ?
+                    discrepancies.reduce((sum, d) => sum + d.deltaX, 0) / discrepancies.length : 0,
+                averageDeltaY: discrepancies.length > 0 ?
+                    discrepancies.reduce((sum, d) => sum + d.deltaY, 0) / discrepancies.length : 0
+            }
+        });
+
+        console.log('=' .repeat(80));
+    }
+
+    async writeHexbinTrackingLog(data) {
+        const logContent = {
+            timestamp: new Date().toISOString(),
+            type: 'HEXBIN_SHOT_TRACKING',
+            shooter: this.selectedShooter,
+            allShootersMode: {
+                numHexbins: data.allShooters.hexbins.length,
+                radius: data.allShooters.radius,
+                fieldDimensions: `${data.allShooters.fieldWidth} x ${data.allShooters.fieldHeight}`
+            },
+            selectedMode: {
+                numHexbins: data.selected.hexbins.length,
+                radius: data.selected.radius,
+                fieldDimensions: `${data.selected.fieldWidth} x ${data.selected.fieldHeight}`
+            },
+            analysis: data.analysis,
+            sampleDiscrepancies: data.discrepancies.slice(0, 5).map(d => ({
+                shotId: d.shotId.substring(0, 50),
+                allShootersPos: `(${d.allShooters.hexbinX.toFixed(1)}, ${d.allShooters.hexbinY.toFixed(1)})`,
+                selectedPos: `(${d.selected.hexbinX.toFixed(1)}, ${d.selected.hexbinY.toFixed(1)})`,
+                delta: `X: ${d.deltaX.toFixed(1)}, Y: ${d.deltaY.toFixed(1)}`,
+                scaleRatio: d.scaleRatio.toFixed(2)
+            }))
+        };
+
+        try {
+            await fetch('/api/debug-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(logContent)
+            });
+            console.log('Hexbin tracking log written to file');
+        } catch (error) {
+            console.error('Failed to write tracking log:', error);
+        }
+    }
+
+    async writeHexbinAnalysisFile(logData) {
+        const analysis = [];
+
+        analysis.push('='.repeat(80));
+        analysis.push('HEXBIN COMPARISON ANALYSIS');
+        analysis.push(`Time: ${logData.timestamp}`);
+        analysis.push(`Selected Shooter: ${logData.selectedShooter}`);
+        analysis.push('='.repeat(80));
+        analysis.push('');
+
+        analysis.push('ALL SHOOTERS MODE:');
+        analysis.push(`  Field: ${logData.allShootersMode.fieldWidth.toFixed(0)} x ${logData.allShootersMode.fieldHeight.toFixed(0)}`);
+        analysis.push(`  Hexbin Radius: ${logData.allShootersMode.radius.toFixed(2)}`);
+        analysis.push(`  Total Hexbins: ${logData.allShootersMode.numHexbins}`);
+        analysis.push(`  Y-Axis Range: ${logData.yAxisAnalysis.allShooters.min.toFixed(1)} to ${logData.yAxisAnalysis.allShooters.max.toFixed(1)}`);
+        analysis.push('');
+
+        analysis.push('SELECTED SHOOTER - UPPER HALF:');
+        analysis.push(`  Expected Y Range: 0 to ${logData.yAxisAnalysis.upperHalf.expectedMax.toFixed(1)}`);
+        analysis.push(`  Actual Y Range: ${logData.yAxisAnalysis.upperHalf.min.toFixed(1)} to ${logData.yAxisAnalysis.upperHalf.max.toFixed(1)}`);
+        analysis.push(`  Hexbin Radius: ${logData.selectedUpperMode.radius.toFixed(2)}`);
+        analysis.push(`  Total Hexbins: ${logData.selectedUpperMode.numHexbins}`);
+        analysis.push('');
+
+        if (logData.selectedLowerMode) {
+            analysis.push('SELECTED SHOOTER - LOWER HALF:');
+            analysis.push(`  Expected Y Range: ${logData.yAxisAnalysis.lowerHalf.expectedMin.toFixed(1)} to ${logData.yAxisAnalysis.lowerHalf.expectedMax.toFixed(1)}`);
+            analysis.push(`  Actual Y Range: ${logData.yAxisAnalysis.lowerHalf.min.toFixed(1)} to ${logData.yAxisAnalysis.lowerHalf.max.toFixed(1)}`);
+            analysis.push(`  Hexbin Radius: ${logData.selectedLowerMode.radius.toFixed(2)}`);
+            analysis.push(`  Total Hexbins: ${logData.selectedLowerMode.numHexbins}`);
+            analysis.push('');
+        }
+
+        analysis.push('FIRST 5 HEXBINS COMPARISON:');
+        analysis.push('-'.repeat(40));
+        analysis.push('All Shooters Mode:');
+        logData.allShootersMode.hexbins.slice(0, 5).forEach((h, i) => {
+            analysis.push(`  ${i+1}. Pos: (${h.x.toFixed(1)}, ${h.y.toFixed(1)}), Total: ${h.total}, Scale: ${h.scale.toFixed(2)}`);
+        });
+        analysis.push('');
+
+        analysis.push('Selected Upper Half:');
+        logData.selectedUpperMode.hexbins.slice(0, 5).forEach((h, i) => {
+            analysis.push(`  ${i+1}. Pos: (${h.x.toFixed(1)}, ${h.y.toFixed(1)}), Total: ${h.total}, Scale: ${h.scale.toFixed(2)}`);
+        });
+
+        if (logData.selectedLowerMode) {
+            analysis.push('');
+            analysis.push('Selected Lower Half:');
+            logData.selectedLowerMode.hexbins.slice(0, 5).forEach((h, i) => {
+                analysis.push(`  ${i+1}. Pos: (${h.x.toFixed(1)}, ${h.y.toFixed(1)}), Total: ${h.total}, Scale: ${h.scale.toFixed(2)}`);
+            });
+        }
+
+        analysis.push('');
+        analysis.push('='.repeat(80));
+
+        // Send analysis as a separate log entry
+        await fetch('/api/debug-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'HEXBIN_ANALYSIS',
+                message: analysis.join('\n')
+            })
+        });
+    }
+
+    createSplitHexbinHeatmap(group, shotsWithCoords, width, height, yOffset) {
+        // Special version for split view - shots already have remapped coordinates
+        console.log(`createSplitHexbinHeatmap: ${shotsWithCoords.length} shots, yOffset=${yOffset}`);
+
+        if (!d3.hexbin) {
+            console.warn('d3-hexbin not available, skipping');
+            return;
+        }
+
+        try {
+            // Create hexbin generator with proper extent for this half
+            const scaleFactor = width / 600;
+            const hexbin = d3.hexbin()
+                .x(d => d.visualX)
+                .y(d => d.visualY)
+                .radius(20 * scaleFactor)  // Smaller radius for split view
+                .extent([[0, yOffset], [width, yOffset + height]]);
+
+            // Calculate success rate for each hexbin and track shot IDs
+            const hexData = hexbin(shotsWithCoords).map(bin => {
+                const goals = bin.filter(d => d.result === 'Goal').length;
+                const total = bin.length;
+                const successRate = total > 0 ? goals / total : 0;
+
+                // Extract shot IDs for tracking
+                const shotIds = bin.map(shot => ({
+                    id: shot.id || `${shot.shooter}_${shot.x_graph}_${shot.y_graph}`, // Create unique ID
+                    shooter: shot.shooter,
+                    originalX: shot.x_graph,
+                    originalY: shot.y_graph,
+                    visualX: shot.visualX,
+                    visualY: shot.visualY
+                }));
+
+                return {
+                    ...bin,
+                    goals: goals,
+                    total: total,
+                    successRate: successRate,
+                    shotIds: shotIds
+                };
+            });
+
+            // Filter out hexagons with very few shots
+            const filteredHexData = hexData.filter(d => d.total >= 1);
+
+            // Get league average for comparison
+            const leagueAverage = shotsWithCoords.filter(d => d.result === 'Goal').length / shotsWithCoords.length;
+
+            // Create color scale
+            const colorScale = d3.scaleLinear()
+                .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
+                .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+                .clamp(true);
+
+            // Size scale based on number of shots
+            const sizeScale = d3.scalePow()
+                .exponent(0.8)
+                .domain([0, d3.max(filteredHexData, d => d.total)])
+                .range([0.3, 1.2]);
+
+            // Create tooltip
+            const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
+                ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
+                : d3.select('body').select('.heatmap-tooltip');
+
+            // Draw hexagons
+            const hexagons = group.selectAll('.hexagon')
+                .data(filteredHexData)
+                .enter().append('g')
+                .attr('class', 'hexagon-group')
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
+            hexagons.append('path')
+                .attr('class', 'hexagon')
+                .attr('d', hexbin.hexagon())
+                .attr('transform', d => {
+                    const scale = sizeScale(d.total);
+                    return `scale(${scale})`;
+                })
+                .style('fill', d => colorScale(d.successRate))
+                .style('stroke', '#fff')
+                .style('stroke-width', 1)
+                .style('opacity', 0.85)
+                .on('mouseover', function(event, d) {
+                    d3.select(this)
+                        .style('opacity', 1)
+                        .style('stroke-width', 2);
+
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+
+                    const percentage = (d.successRate * 100).toFixed(1);
+                    const aboveAverage = d.successRate > leagueAverage;
+                    const diff = ((d.successRate - leagueAverage) * 100).toFixed(1);
+
+                    tooltip.html(`
+                        <strong>Zone Statistics</strong><br/>
+                        Shots: ${d.total}<br/>
+                        Goals: ${d.goals}<br/>
+                        Success Rate: ${percentage}%<br/>
+                        ${aboveAverage ? '↑' : '↓'} ${Math.abs(diff)}% vs average
+                    `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this)
+                        .style('opacity', 0.85)
+                        .style('stroke-width', 1);
+
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+
+            console.log(`Created ${hexagons.size()} hexagons in split view`);
+
+        } catch (error) {
+            console.error('Error creating split hexbin heatmap:', error);
+        }
     }
 
     createHexbinHeatmap(group, shotsWithCoords, width, height) {
@@ -1881,25 +2875,39 @@ class FloorballApp {
         }
 
         try {
-            // Create hexbin generator with larger zones for better aggregation
+            // Create hexbin generator scaled proportionally to field size
+            // Original radius was 28 for 600x1200 field
+            const scaleFactor = width / 600;
             const hexbin = d3.hexbin()
                 .x(d => d.visualX)
                 .y(d => d.visualY)
-                .radius(28) // Larger zones to aggregate more shots when data is sparse
+                .radius(28 * scaleFactor)
                 .extent([[0, 0], [width, height]]);
 
             heatmapLog.push('Hexbin generator created successfully');
 
-            // Calculate success rate for each hexbin
+            // Calculate success rate for each hexbin and track shot IDs
             const hexData = hexbin(shotsWithCoords).map(bin => {
                 const goals = bin.filter(d => d.result === 'Goal').length;
                 const total = bin.length;
                 const successRate = total > 0 ? goals / total : 0;
+
+                // Extract shot IDs for tracking
+                const shotIds = bin.map(shot => ({
+                    id: shot.id || `${shot.shooter}_${shot.x_graph}_${shot.y_graph}`, // Create unique ID
+                    shooter: shot.shooter,
+                    originalX: shot.x_graph,
+                    originalY: shot.y_graph,
+                    visualX: shot.visualX,
+                    visualY: shot.visualY
+                }));
+
                 return {
                     ...bin,
                     goals: goals,
                     total: total,
-                    successRate: successRate
+                    successRate: successRate,
+                    shotIds: shotIds
                 };
             });
             heatmapLog.push(`Hexbin data created: ${hexData.length} hexagons`);
@@ -1933,6 +2941,62 @@ class FloorballApp {
                 ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
                 : d3.select('body').select('.heatmap-tooltip');
             heatmapLog.push('Tooltip created');
+
+            // Store comprehensive hexbin tracking data
+            const isAllShootersMode = !this.selectedShooter;
+            const trackingData = {
+                mode: isAllShootersMode ? 'all_shooters' : 'selected_shooter',
+                shooter: this.selectedShooter || 'none',
+                timestamp: new Date().toISOString(),
+                radius: 28 * scaleFactor,
+                fieldWidth: width,
+                fieldHeight: height,
+                hexbins: filteredHexData.map(d => ({
+                    x: d.x,
+                    y: d.y,
+                    total: d.total,
+                    goals: d.goals,
+                    scale: sizeScale(d.total),
+                    shotIds: d.shotIds // Include shot tracking
+                }))
+            };
+
+            // Store for comparison
+            if (isAllShootersMode) {
+                window.hexbinTracking.allShooters = trackingData;
+            } else {
+                window.hexbinTracking.selectedShooter = trackingData;
+                // Perform comparison after storing
+                this.compareHexbinPositions();
+            }
+
+            // Also store in the old debug system for compatibility
+            const hexbinDebugKey = `all_shooters_${this.selectedShooter || 'none'}`;
+            window.hexbinDebugData[hexbinDebugKey] = {
+                mode: 'all_shooters',
+                shooter: this.selectedShooter || 'none',
+                radius: 28 * scaleFactor,
+                fieldWidth: width,
+                fieldHeight: height,
+                hexbins: filteredHexData.map(d => ({
+                    x: d.x,
+                    y: d.y,
+                    total: d.total,
+                    goals: d.goals,
+                    scale: sizeScale(d.total)
+                }))
+            };
+
+            console.log(`Stored hexbin debug data for ${hexbinDebugKey}:`, {
+                numHexbins: filteredHexData.length,
+                radius: 28 * scaleFactor,
+                fieldDimensions: `${width} x ${height}`,
+                firstThreeHexbins: filteredHexData.slice(0, 3).map(h => ({
+                    x: h.x.toFixed(1),
+                    y: h.y.toFixed(1),
+                    total: h.total
+                }))
+            });
 
             // Draw hexagons with variable size based on shot frequency
             const hexagons = group.selectAll('.hexagon')
@@ -2095,16 +3159,20 @@ class FloorballApp {
     }
 
     addHeatmapLegend(svg, width, height, margin) {
-        // Position legend horizontally in the top goal zone (first 90 pixels)
+        // Legend dimensions
+        const legendWidth = 120;
+
+        // Position legend perfectly centered horizontally on the shot map
+        const legendX = margin.left + (width / 2) - (legendWidth / 2);
         const legendGroup = svg.append('g')
             .attr('class', 'heatmap-legend')
-            .attr('transform', `translate(${margin.left + 150}, ${margin.top + 30})`);
+            .attr('transform', `translate(${legendX}, ${margin.top + 20})`);
 
         // Legend title
         legendGroup.append('text')
             .attr('x', 0)
-            .attr('y', -10)
-            .style('font-size', '12px')
+            .attr('y', -5)
+            .style('font-size', '10px')
             .style('font-weight', 'bold')
             .style('fill', '#E5E5E7')
             .text('Success Rate');
@@ -2130,67 +3198,31 @@ class FloorballApp {
                 .attr('stop-color', stop.color);
         });
 
-        // Legend rectangle (horizontal)
+        // Legend rectangle (horizontal) - scaled down
+        const legendHeight = 10;
         legendGroup.append('rect')
-            .attr('width', 200)
-            .attr('height', 15)
+            .attr('width', legendWidth)
+            .attr('height', legendHeight)
             .style('fill', 'url(#heatmap-gradient)');
 
-        // Legend scale labels (horizontal)
+        // Legend scale labels (horizontal) - scaled down
         const scaleLabels = [
             { value: '0%', x: 0 },
-            { value: '30%', x: 100 },
-            { value: '60%+', x: 200 }
+            { value: '30%', x: legendWidth / 2 },
+            { value: '60%+', x: legendWidth }
         ];
 
         scaleLabels.forEach(label => {
             legendGroup.append('text')
                 .attr('x', label.x)
-                .attr('y', 28)
-                .style('font-size', '10px')
+                .attr('y', legendHeight + 12)
+                .style('font-size', '8px')
                 .style('fill', '#A0A0A8')
-                .style('text-anchor', label.x === 0 ? 'start' : (label.x === 200 ? 'end' : 'middle'))
+                .style('text-anchor', label.x === 0 ? 'start' : (label.x === legendWidth ? 'end' : 'middle'))
                 .text(label.value);
         });
 
-        // Size legend - positioned horizontally in the bottom goal zone (last 90 pixels)
-        const sizeLegendGroup = svg.append('g')
-            .attr('class', 'size-legend')
-            .attr('transform', `translate(${margin.left + 150}, ${margin.top + height - 60})`);
-
-        sizeLegendGroup.append('text')
-            .attr('x', 0)
-            .attr('y', -10)
-            .style('font-size', '12px')
-            .style('font-weight', 'bold')
-            .style('fill', '#E5E5E7')
-            .text('Shot Frequency');
-
-        // Example hexagons for size (horizontal layout)
-        const hexbin = d3.hexbin().radius(10);
-        const sizeExamples = [
-            { shots: 1, scale: 0.5 },
-            { shots: 5, scale: 0.8 },
-            { shots: 10, scale: 1.2 }
-        ];
-
-        sizeExamples.forEach((example, i) => {
-            sizeLegendGroup.append('path')
-                .attr('d', hexbin.hexagon(10 * example.scale))
-                .attr('transform', `translate(${i * 70 + 15}, 10)`)
-                .style('fill', '#00D9FF')
-                .style('stroke', '#fff')
-                .style('stroke-width', 1)
-                .style('opacity', 0.5);
-
-            sizeLegendGroup.append('text')
-                .attr('x', i * 70 + 15)
-                .attr('y', 30)
-                .style('font-size', '10px')
-                .style('fill', '#A0A0A8')
-                .style('text-anchor', 'middle')
-                .text(`${example.shots}+`);
-        });
+        // Shot frequency legend removed per user request
     }
 
     updateXGHistogramsWithPlayer(playerName) {
@@ -2406,49 +3438,91 @@ class FloorballApp {
         console.log('Creating xG histograms');
         console.log('Current game ID:', this.currentGameId);
 
-        // Get unique teams
-        const teams = [...new Set(data.map(d => d.team1))].concat([...new Set(data.map(d => d.team2))]);
-        const uniqueTeams = [...new Set(teams)].filter(t => t); // Remove nulls/undefined
+        // Get unique shooting teams from the actual data
+        const uniqueShootingTeams = [...new Set(data.map(d => d.shooting_team))].filter(t => t);
 
-        if (uniqueTeams.length === 0) {
+        console.log('Unique shooting teams:', uniqueShootingTeams);
+
+        if (uniqueShootingTeams.length === 0) {
             console.log('No teams found for histogram');
             return;
         }
 
         let team1, team2, team1Shots, team2Shots;
 
-        if (this.currentGameId === 'all') {
-            // For "All Games" view, show all shots in both histograms
-            team1 = 'All Shots';
-            team2 = 'All Shots';
-            team1Shots = data;
-            team2Shots = data;
+        // Check if a single shooter is selected
+        if (this.selectedShooter) {
+            // Upper histogram/map: shots by the selected shooter (already filtered in data)
+            team1 = this.selectedShooter;
+            team1Shots = data; // Already filtered to this shooter's shots
+
+            // Lower histogram/map: OPPONENT shots when this player is on the field
+            team2 = `Opponents (${this.selectedShooter} defending)`;
+
+            // Get the first team name from current game data
+            const team1Name = this.currentGameData[0]?.team1;
+
+            team2Shots = this.currentGameData.filter(d => {
+                const playerName = this.selectedShooter;
+                // Only check OPPONENT shots (shots against your team)
+                const isOpponentShot = d.shooting_team && d.shooting_team !== team1Name;
+                const playerOnField = d.t1lw === playerName ||
+                                     d.t1c === playerName ||
+                                     d.t1rw === playerName ||
+                                     d.t1ld === playerName ||
+                                     d.t1rd === playerName ||
+                                     d.t1g === playerName ||
+                                     d.t1x === playerName;
+                return isOpponentShot && playerOnField;
+            });
+
+            console.log(`Selected shooter: ${team1}`);
+            console.log(`Shooter's shots: ${team1Shots.length}`);
+            console.log(`Opponent shots when ${team1} defending: ${team2Shots.length}`);
+        } else if (this.currentGameId === 'all') {
+            // For "All Games" view: Team 1 vs All Opponents combined
+            team1 = uniqueShootingTeams[0]; // Assuming first team is always your team
+            team2 = 'All Opponents';
+            team1Shots = data.filter(d => d.shooting_team === team1);
+            team2Shots = data.filter(d => d.shooting_team !== team1); // All other teams
         } else {
-            // For individual games, separate by team
-            team1 = uniqueTeams[0];
-            team2 = uniqueTeams.length > 1 ? uniqueTeams[1] : team1;
+            // For individual games, separate by the two teams in that game
+            team1 = uniqueShootingTeams[0];
+            team2 = uniqueShootingTeams.length > 1 ? uniqueShootingTeams[1] : team1;
             team1Shots = data.filter(d => d.shooting_team === team1);
             team2Shots = data.filter(d => d.shooting_team === team2);
         }
 
-        // Position for histograms (right side of field)
-        const histogramX = fieldWidth + margin.left + 20;
-        const histogramWidth = 200;
-        const histogramHeight = ((fieldHeight - 100) / 2) / 3;
+        console.log(`Team 1 (${team1}): ${team1Shots.length} shots`);
+        console.log(`Team 2 (${team2}): ${team2Shots.length} shots`);
+
+        // Position for histograms (far right side)
+        const dashboardMain = document.querySelector('.dashboard-main');
+        const dashboardRect = dashboardMain.getBoundingClientRect();
+        const cellWidth = dashboardRect.width / 15;
+        const cellHeight = dashboardRect.height / 10;
+
+        const histogramX = cellWidth * 4.5; // Position at column 4.5 (moved half cell left from 5)
+        const histogramWidth = cellWidth * 3; // Use 3 columns width
+        const histogramHeight = cellHeight * 2; // Exactly 2 cells tall
+
+        // Calculate shared y-scale maximum across both teams
+        const sharedYMax = this.calculateSharedYMax(team1Shots, team2Shots);
+        console.log(`Shared Y max for both histograms: ${sharedYMax}`);
 
         // Create histogram for Team 1 (upper half)
         const team1HistGroup = svg.append('g')
             .attr('class', 'xg-histogram-team1')
             .attr('transform', `translate(${histogramX}, ${margin.top + 20})`);
 
-        this.drawXGHistogram(team1HistGroup, team1Shots, histogramWidth, histogramHeight, team1, 'team1');
+        this.drawXGHistogram(team1HistGroup, team1Shots, histogramWidth, histogramHeight, team1, 'team1', sharedYMax);
 
-        // Create histogram for Team 2 (lower half)
+        // Create histogram for Team 2 (lower half) - moved 1 cell up
         const team2HistGroup = svg.append('g')
             .attr('class', 'xg-histogram-team2')
-            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100})`);
+            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100 - cellHeight})`);
 
-        this.drawXGHistogram(team2HistGroup, team2Shots, histogramWidth, histogramHeight, team2, 'team2');
+        this.drawXGHistogram(team2HistGroup, team2Shots, histogramWidth, histogramHeight, team2, 'team2', sharedYMax);
 
         // Store references for updating with player overlay
         this.team1HistGroup = team1HistGroup;
@@ -2459,12 +3533,68 @@ class FloorballApp {
         this.histogramHeight = histogramHeight;
     }
 
-    drawXGHistogram(group, shots, width, height, teamName, teamClass) {
+    calculateSharedYMax(team1Shots, team2Shots) {
+        const binWidth = 0.05;
+        const thresholds = d3.range(0, 0.6 + binWidth, binWidth);
+
+        // Calculate max for team 1
+        const team1ValidShots = team1Shots.filter(d => {
+            const xg = parseFloat(d.xg);
+            return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+        });
+
+        const team1BinnedData = thresholds.slice(0, -1).map((threshold, i) => {
+            const binShots = team1ValidShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return xg >= threshold && xg < thresholds[i + 1];
+            });
+            return binShots.length;
+        });
+
+        // Calculate max for team 2
+        const team2ValidShots = team2Shots.filter(d => {
+            const xg = parseFloat(d.xg);
+            return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+        });
+
+        const team2BinnedData = thresholds.slice(0, -1).map((threshold, i) => {
+            const binShots = team2ValidShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return xg >= threshold && xg < thresholds[i + 1];
+            });
+            return binShots.length;
+        });
+
+        // Return the maximum across both teams
+        const team1Max = d3.max(team1BinnedData) || 0;
+        const team2Max = d3.max(team2BinnedData) || 0;
+        return Math.max(team1Max, team2Max);
+    }
+
+    drawXGHistogram(group, shots, width, height, teamName, teamClass, sharedYMax) {
+        console.log(`Drawing histogram for ${teamName} (${teamClass}): ${shots.length} shots`);
+
+        // Log sample of shooting teams in this data
+        const shootingTeams = [...new Set(shots.map(d => d.shooting_team))];
+        console.log(`Shooting teams in ${teamName} data:`, shootingTeams);
+
         // Filter out invalid xG values (xG goes up to 0.6)
         const validShots = shots.filter(d => {
             const xg = parseFloat(d.xg);
             return !isNaN(xg) && xg >= 0 && xg <= 0.6;
         });
+
+        console.log(`Valid shots for ${teamName}: ${validShots.length}`);
+
+        // Add shot count in upper right corner
+        group.append('text')
+            .attr('x', width)
+            .attr('y', 0)
+            .attr('text-anchor', 'end')
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .style('fill', '#E5E5E7')
+            .text(`${shots.length} shots`);
 
         if (validShots.length === 0) {
             group.append('text')
@@ -2477,15 +3607,7 @@ class FloorballApp {
             return;
         }
 
-        // Title
-        group.append('text')
-            .attr('x', width / 2)
-            .attr('y', -5)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '14px')
-            .style('font-weight', 'bold')
-            .style('fill', '#E5E5E7')
-            .text('xG Distribution');
+        // Title removed per user request
 
         // Create bins and calculate stacked data
         const binWidth = 0.05;
@@ -2535,8 +3657,10 @@ class FloorballApp {
             .domain([0, 0.6])
             .range([0, width]);
 
+        // Use shared Y max if provided, otherwise use local max
+        const yMax = sharedYMax !== undefined ? sharedYMax : d3.max(binnedData, d => d.total);
         const y = d3.scaleLinear()
-            .domain([0, d3.max(binnedData, d => d.total)])
+            .domain([0, yMax])
             .nice()
             .range([height, 0]);
 
@@ -2589,7 +3713,7 @@ class FloorballApp {
                 .tickValues([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
                 .tickFormat(d => d.toFixed(1)));
 
-        // Add y-axis
+        // Add y-axis (label removed per user request)
         group.append('g')
             .call(d3.axisLeft(y).ticks(5));
 
@@ -2601,14 +3725,7 @@ class FloorballApp {
             .style('fill', '#A0A0A8')
             .text('xG Value');
 
-        group.append('text')
-            .attr('transform', 'rotate(-90)')
-            .attr('y', -30)
-            .attr('x', -height / 2)
-            .style('text-anchor', 'middle')
-            .style('font-size', '11px')
-            .style('fill', '#A0A0A8')
-            .text('Number of Shots');
+        // Y-axis label removed per user request
 
         // Add average line
         const xgValues = validShots.map(d => parseFloat(d.xg));

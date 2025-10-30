@@ -8,12 +8,16 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #1A1A1D;
     color: #E5E5E7;
+    overflow: hidden;
 }
 
 .container {
-    max-width: 1920px;
+    width: 1920px;
+    height: 1080px;
     margin: 0 auto;
     padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 header {
@@ -60,14 +64,18 @@ header {
 /* Tab Content */
 main {
     margin-top: 30px;
+    height: calc(1080px - 140px);
+    overflow: hidden;
 }
 
 .tab-content {
     display: none;
+    height: 100%;
 }
 
 .tab-content.active {
     display: block;
+    height: 100%;
 }
 
 /* Import Section */
@@ -234,12 +242,48 @@ main {
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.dashboard-header h2 {
+    margin: 0;
+}
+
+.dev-grid-toggle-btn {
+    padding: 8px 16px;
+    background-color: #3D3D42;
+    color: #A0A0A8;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.dev-grid-toggle-btn:hover {
+    background-color: #4A4A50;
+    border-color: #00D9FF;
+    color: #00D9FF;
 }
 
 .dashboard-layout {
     display: flex;
     gap: 30px;
     align-items: flex-start;
+    flex: 1;
+    min-height: 0;
 }
 
 .dashboard-sidebar {
@@ -252,7 +296,54 @@ main {
 .dashboard-main {
     flex: 1;
     min-width: 0;
+    position: relative;
+    height: 100%;
 }
+
+/* TEMPORARY: Dev grid overlay for layout planning - Remove when dashboard is finalized */
+.dev-grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    grid-template-rows: repeat(9, 1fr) 0.5fr;
+    gap: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+
+.dev-grid-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dev-grid-cell {
+    border: 1px dashed rgba(0, 217, 255, 0.3);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 2px;
+    aspect-ratio: 1;
+}
+
+.dev-grid-cell.half-height {
+    aspect-ratio: 2;
+}
+
+.dev-grid-cell span {
+    background: rgba(0, 217, 255, 0.8);
+    color: #1A1A1D;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: monospace;
+}
+/* END TEMPORARY */
 
 .game-selector {
     margin-bottom: 0;
@@ -376,14 +467,15 @@ main {
     padding: 20px;
     border-radius: 10px;
     border: 1px solid #3D3D42;
-    overflow-x: auto;
+    overflow: visible;
+    width: 100%;
+    height: 100%;
 }
 
 .chart {
-    min-height: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
 /* Responsive */
