@@ -2247,11 +2247,21 @@ class FloorballApp {
             const goals = bin.filter(d => d.result === 'Goal').length;
             const total = bin.length;
             const successRate = total > 0 ? goals / total : 0;
+
+            // Calculate xG range for this hexbin
+            const xgValues = bin.map(d => parseFloat(d.xg)).filter(xg => !isNaN(xg));
+            const avgXG = xgValues.length > 0 ? d3.mean(xgValues) : 0;
+            const minXG = xgValues.length > 0 ? d3.min(xgValues) : 0;
+            const maxXG = xgValues.length > 0 ? d3.max(xgValues) : 0;
+
             return {
                 ...bin,
                 goals: goals,
                 total: total,
-                successRate: successRate
+                successRate: successRate,
+                avgXG: avgXG,
+                minXG: minXG,
+                maxXG: maxXG
             };
         });
 
@@ -2315,6 +2325,9 @@ class FloorballApp {
             .attr('class', 'hexagon')
             .attr('d', hexbin.hexagon())
             .attr('transform', d => `scale(${sizeScale(d.total)})`)
+            .attr('data-min-xg', d => d.minXG)
+            .attr('data-max-xg', d => d.maxXG)
+            .attr('data-avg-xg', d => d.avgXG)
             .style('fill', d => colorScale(d.successRate))
             .style('stroke', '#fff')
             .style('stroke-width', 1)
@@ -2751,6 +2764,12 @@ class FloorballApp {
                 const total = bin.length;
                 const successRate = total > 0 ? goals / total : 0;
 
+                // Calculate average xG for this hexbin
+                const xgValues = bin.map(d => parseFloat(d.xg)).filter(xg => !isNaN(xg));
+                const avgXG = xgValues.length > 0 ? d3.mean(xgValues) : 0;
+                const minXG = xgValues.length > 0 ? d3.min(xgValues) : 0;
+                const maxXG = xgValues.length > 0 ? d3.max(xgValues) : 0;
+
                 // Extract shot IDs for tracking
                 const shotIds = bin.map(shot => ({
                     id: shot.id || `${shot.shooter}_${shot.x_graph}_${shot.y_graph}`, // Create unique ID
@@ -2758,7 +2777,8 @@ class FloorballApp {
                     originalX: shot.x_graph,
                     originalY: shot.y_graph,
                     visualX: shot.visualX,
-                    visualY: shot.visualY
+                    visualY: shot.visualY,
+                    xg: parseFloat(shot.xg)
                 }));
 
                 return {
@@ -2766,7 +2786,10 @@ class FloorballApp {
                     goals: goals,
                     total: total,
                     successRate: successRate,
-                    shotIds: shotIds
+                    shotIds: shotIds,
+                    avgXG: avgXG,
+                    minXG: minXG,
+                    maxXG: maxXG
                 };
             });
 
@@ -2807,6 +2830,9 @@ class FloorballApp {
                     const scale = sizeScale(d.total);
                     return `scale(${scale})`;
                 })
+                .attr('data-min-xg', d => d.minXG)
+                .attr('data-max-xg', d => d.maxXG)
+                .attr('data-avg-xg', d => d.avgXG)
                 .style('fill', d => colorScale(d.successRate))
                 .style('stroke', '#fff')
                 .style('stroke-width', 1)
@@ -2892,6 +2918,12 @@ class FloorballApp {
                 const total = bin.length;
                 const successRate = total > 0 ? goals / total : 0;
 
+                // Calculate average xG for this hexbin
+                const xgValues = bin.map(d => parseFloat(d.xg)).filter(xg => !isNaN(xg));
+                const avgXG = xgValues.length > 0 ? d3.mean(xgValues) : 0;
+                const minXG = xgValues.length > 0 ? d3.min(xgValues) : 0;
+                const maxXG = xgValues.length > 0 ? d3.max(xgValues) : 0;
+
                 // Extract shot IDs for tracking
                 const shotIds = bin.map(shot => ({
                     id: shot.id || `${shot.shooter}_${shot.x_graph}_${shot.y_graph}`, // Create unique ID
@@ -2899,7 +2931,8 @@ class FloorballApp {
                     originalX: shot.x_graph,
                     originalY: shot.y_graph,
                     visualX: shot.visualX,
-                    visualY: shot.visualY
+                    visualY: shot.visualY,
+                    xg: parseFloat(shot.xg)
                 }));
 
                 return {
@@ -2907,7 +2940,10 @@ class FloorballApp {
                     goals: goals,
                     total: total,
                     successRate: successRate,
-                    shotIds: shotIds
+                    shotIds: shotIds,
+                    avgXG: avgXG,
+                    minXG: minXG,
+                    maxXG: maxXG
                 };
             });
             heatmapLog.push(`Hexbin data created: ${hexData.length} hexagons`);
@@ -3013,6 +3049,9 @@ class FloorballApp {
                     const scale = sizeScale(d.total);
                     return `scale(${scale})`;
                 })
+                .attr('data-min-xg', d => d.minXG)
+                .attr('data-max-xg', d => d.maxXG)
+                .attr('data-avg-xg', d => d.avgXG)
                 .style('fill', d => colorScale(d.successRate))
                 .style('stroke', '#fff')
                 .style('stroke-width', 1)
@@ -3074,6 +3113,109 @@ class FloorballApp {
                 stack: error.stack
             });
         }
+    }
+
+    highlightHexbinsByXGRange(xgMin, xgMax, teamClass) {
+        console.log(`Highlighting hexbins with xG range ${xgMin.toFixed(2)}-${xgMax.toFixed(2)} for ${teamClass}`);
+
+        // Select all hexagons on the shot map
+        if (!this.shotMapSvg) {
+            console.warn('Shot map SVG not found');
+            return;
+        }
+        const hexagons = this.shotMapSvg.selectAll('.hexagon');
+        console.log(`Found ${hexagons.size()} hexagons to check`);
+
+        // Iterate through hexagons and apply highlighting
+        let highlightCount = 0;
+        let fadeCount = 0;
+
+        hexagons.each(function(d) {
+            const hexagon = d3.select(this);
+            const minXG = parseFloat(hexagon.attr('data-min-xg'));
+            const maxXG = parseFloat(hexagon.attr('data-max-xg'));
+            const avgXG = parseFloat(hexagon.attr('data-avg-xg'));
+
+            // Check if this hexbin's xG range overlaps with the histogram bin
+            const overlaps = !isNaN(minXG) && !isNaN(maxXG) &&
+                           ((minXG >= xgMin && minXG < xgMax) ||
+                            (maxXG > xgMin && maxXG <= xgMax) ||
+                            (minXG <= xgMin && maxXG >= xgMax));
+
+            if (overlaps) {
+                // Highlight matching hexbins
+                hexagon
+                    .style('opacity', 1)
+                    .style('stroke', '#FFD700')
+                    .style('stroke-width', 2.5)
+                    .classed('highlighted', true);
+                highlightCount++;
+            } else {
+                // Fade non-matching hexbins
+                hexagon
+                    .style('opacity', 0.2)
+                    .style('stroke', '#fff')
+                    .style('stroke-width', 1)
+                    .classed('highlighted', false);
+                fadeCount++;
+            }
+        });
+
+        console.log(`Highlighted ${highlightCount} hexbins, faded ${fadeCount} hexbins`);
+
+        // Also handle split view hexagons if they exist
+        const upperHexagons = this.shotMapSvg.selectAll('.upper-split-group .hexagon');
+        const lowerHexagons = this.shotMapSvg.selectAll('.lower-split-group .hexagon');
+
+        [upperHexagons, lowerHexagons].forEach(hexGroup => {
+            hexGroup.each(function(d) {
+                const hexagon = d3.select(this);
+                const minXG = parseFloat(hexagon.attr('data-min-xg'));
+                const maxXG = parseFloat(hexagon.attr('data-max-xg'));
+
+                const overlaps = !isNaN(minXG) && !isNaN(maxXG) &&
+                               ((minXG >= xgMin && minXG < xgMax) ||
+                                (maxXG > xgMin && maxXG <= xgMax) ||
+                                (minXG <= xgMin && maxXG >= xgMax));
+
+                if (overlaps) {
+                    hexagon
+                        .style('opacity', 1)
+                        .style('stroke', '#FFD700')
+                        .style('stroke-width', 2.5)
+                        .classed('highlighted', true);
+                } else {
+                    hexagon
+                        .style('opacity', 0.2)
+                        .style('stroke', '#fff')
+                        .style('stroke-width', 1)
+                        .classed('highlighted', false);
+                }
+            });
+        });
+    }
+
+    resetHexbinHighlighting() {
+        console.log('Resetting hexbin highlighting');
+
+        if (!this.shotMapSvg) {
+            console.warn('Shot map SVG not found');
+            return;
+        }
+
+        // Reset all hexagons to normal state
+        this.shotMapSvg.selectAll('.hexagon')
+            .style('opacity', 0.85)
+            .style('stroke', '#fff')
+            .style('stroke-width', 1)
+            .classed('highlighted', false);
+
+        // Reset split view hexagons if they exist
+        this.shotMapSvg.selectAll('.upper-split-group .hexagon, .lower-split-group .hexagon')
+            .style('opacity', 0.85)
+            .style('stroke', '#fff')
+            .style('stroke-width', 1)
+            .classed('highlighted', false);
     }
 
     createGridHeatmap(group, shotsWithCoords, width, height) {
@@ -3506,9 +3648,18 @@ class FloorballApp {
         const histogramWidth = cellWidth * 3; // Use 3 columns width
         const histogramHeight = cellHeight * 2; // Exactly 2 cells tall
 
-        // Calculate shared y-scale maximum across both teams
-        const sharedYMax = this.calculateSharedYMax(team1Shots, team2Shots);
-        console.log(`Shared Y max for both histograms: ${sharedYMax}`);
+        // Calculate y-scale maximum
+        // Only use shared Y-max when no player is selected (for team comparison)
+        // When player is selected, each histogram uses its own scale
+        let sharedYMax = null;
+        if (!this.selectedShooter) {
+            // No player selected: use shared Y-axis for volume comparison
+            sharedYMax = this.calculateSharedYMax(team1Shots, team2Shots);
+            console.log(`Shared Y max for team comparison: ${sharedYMax}`);
+        } else {
+            // Player selected: each histogram uses its own scale
+            console.log(`Player selected - using independent Y scales for each histogram`);
+        }
 
         // Create histogram for Team 1 (upper half)
         const team1HistGroup = svg.append('g')
@@ -3586,6 +3737,13 @@ class FloorballApp {
 
         console.log(`Valid shots for ${teamName}: ${validShots.length}`);
 
+        // Store the full team data for background comparison when player is selected
+        if (!this.selectedShooter) {
+            // Store full team histogram data when no player is selected
+            this[`${teamClass}FullData`] = validShots;
+            this[`${teamClass}TeamName`] = teamName;
+        }
+
         // Add shot count in upper right corner
         group.append('text')
             .attr('x', width)
@@ -3657,15 +3815,54 @@ class FloorballApp {
             .domain([0, 0.6])
             .range([0, width]);
 
-        // Use shared Y max if provided, otherwise use local max
-        const yMax = sharedYMax !== undefined ? sharedYMax : d3.max(binnedData, d => d.total);
+        // Use shared Y max if provided (no player selected), otherwise use local max (player selected)
+        const yMax = sharedYMax !== null ? sharedYMax : d3.max(binnedData, d => d.total) || 0;
+        console.log(`Y-axis max for ${teamName}: ${yMax} (sharedYMax: ${sharedYMax})`);
+
+        if (!yMax || yMax === 0) {
+            console.warn(`No valid yMax for histogram ${teamName}, using default of 10`);
+        }
+
         const y = d3.scaleLinear()
-            .domain([0, yMax])
+            .domain([0, yMax || 10])
             .nice()
             .range([height, 0]);
 
+        // Store team histogram data for drawing outline later
+        let teamOutlineData = null;
+        if (this.selectedShooter && this[`${teamClass}FullData`]) {
+            const teamFullData = this[`${teamClass}FullData`];
+
+            // Create binned data for full team
+            const teamBinnedData = thresholds.slice(0, -1).map((threshold, i) => {
+                const binShots = teamFullData.filter(d => {
+                    const xg = parseFloat(d.xg);
+                    return xg >= threshold && xg < thresholds[i + 1];
+                });
+                return {
+                    x0: threshold,
+                    x1: thresholds[i + 1],
+                    total: binShots.length
+                };
+            });
+
+            // Calculate scaling factor to fit team histogram into current Y-scale
+            const teamMaxBin = d3.max(teamBinnedData, d => d.total) || 1;
+            const currentMaxBin = yMax; // Use the current Y-scale maximum
+            const scaleFactor = currentMaxBin / teamMaxBin;
+
+            // Store scaled data for outline drawing
+            teamOutlineData = teamBinnedData.map(bin => ({
+                ...bin,
+                scaledTotal: bin.total * scaleFactor
+            }));
+        }
+
         // Draw stacked bars
         const barGroup = group.append('g').attr('class', 'histogram-bars');
+
+        // Store context for use in event handlers
+        const self = this;
 
         binnedData.forEach(bin => {
             const binGroup = barGroup.append('g')
@@ -3682,18 +3879,26 @@ class FloorballApp {
                 .attr('y', d => y(d.y1))
                 .attr('height', d => y(d.y0) - y(d.y1))
                 .style('fill', d => colorScale(d.result))
-                .style('opacity', 0.8)
+                .style('opacity', self.selectedShooter ? 0.6 : 0.8) // Semi-transparent when player selected
                 .style('stroke', '#fff')
                 .style('stroke-width', 0.5)
                 .style('cursor', 'pointer')
                 .on('mouseover', function(event, d) {
                     binGroup.selectAll('.stack-segment')
-                        .style('opacity', 0.95);
-                })
+                        .style('opacity', self.selectedShooter ? 0.8 : 0.95);
+
+                    // Highlight corresponding hexbins on the shot map
+                    const xgMin = bin.x0;
+                    const xgMax = bin.x1;
+                    this.highlightHexbinsByXGRange(xgMin, xgMax, teamClass);
+                }.bind(this))
                 .on('mouseout', function() {
                     binGroup.selectAll('.stack-segment')
-                        .style('opacity', 0.8);
-                })
+                        .style('opacity', self.selectedShooter ? 0.6 : 0.8);
+
+                    // Reset hexbin highlighting
+                    this.resetHexbinHighlighting();
+                }.bind(this))
                 .append('title')
                 .text(d => {
                     const tooltip = `xG: ${bin.x0.toFixed(2)}-${bin.x1.toFixed(2)}\n` +
@@ -3726,6 +3931,52 @@ class FloorballApp {
             .text('xG Value');
 
         // Y-axis label removed per user request
+
+        // Draw team histogram outline if player is selected
+        if (this.selectedShooter && teamOutlineData) {
+            // Create a line generator for the histogram outline
+            const lineGenerator = d3.line()
+                .x(d => d.x)
+                .y(d => d.y);
+
+            // Build path data for the outline (step function)
+            const pathData = [];
+
+            // Start at bottom left
+            pathData.push({ x: x(0), y: height });
+
+            // Draw the stepped outline
+            teamOutlineData.forEach((bin, i) => {
+                const binX = x(bin.x0);
+                const binWidth = x(bin.x1) - x(bin.x0);
+                const binY = y(bin.scaledTotal);
+
+                // Go up to the bar height at the left edge
+                if (i === 0 || bin.scaledTotal !== teamOutlineData[i-1].scaledTotal) {
+                    pathData.push({ x: binX, y: binY });
+                }
+
+                // Go across to the right edge
+                pathData.push({ x: binX + binWidth, y: binY });
+
+                // If next bar is different height or last bar, go down/up to next height
+                if (i === teamOutlineData.length - 1) {
+                    pathData.push({ x: binX + binWidth, y: height });
+                } else if (teamOutlineData[i + 1].scaledTotal !== bin.scaledTotal) {
+                    pathData.push({ x: binX + binWidth, y: y(teamOutlineData[i + 1].scaledTotal) });
+                }
+            });
+
+            // Draw the outline
+            group.append('path')
+                .attr('class', 'team-histogram-outline')
+                .attr('d', lineGenerator(pathData))
+                .style('fill', 'none')
+                .style('stroke', '#fff')
+                .style('stroke-width', 1.5)
+                .style('opacity', 0.9)
+                .style('pointer-events', 'none'); // Don't interfere with hover events
+        }
 
         // Add average line
         const xgValues = validShots.map(d => parseFloat(d.xg));
