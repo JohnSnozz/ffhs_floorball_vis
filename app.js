@@ -1138,19 +1138,15 @@ class FloorballApp {
         // Store selected shooter for special histogram/map handling
         this.selectedShooter = selectedShooters.length === 1 ? selectedShooters[0] : null;
 
-        let filteredData = this.currentGameData;
+        // First, apply filters WITHOUT shooter filter for team background data
+        let teamFilteredData = this.currentGameData;
 
-        // Apply shooter filter (only for shots by this player)
-        if (selectedShooters.length > 0) {
-            filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
-        }
-
-        // Apply result filter (only if at least one is selected)
+        // Apply result filter to team data
         if (selectedResults.length > 0) {
-            filteredData = filteredData.filter(d => selectedResults.includes(d.result));
+            teamFilteredData = teamFilteredData.filter(d => selectedResults.includes(d.result));
         }
 
-        // Apply type filter with turnover logic
+        // Apply type filter to team data
         if (selectedTypes.length > 0) {
             const isTurnoverActive = selectedTypes.includes('Turnover');
             const isDirectActive = selectedTypes.includes('Direct');
@@ -1184,8 +1180,17 @@ class FloorballApp {
             }
 
             if (allowedTypes.length > 0) {
-                filteredData = filteredData.filter(d => allowedTypes.includes(d.type));
+                teamFilteredData = teamFilteredData.filter(d => allowedTypes.includes(d.type));
             }
+        }
+
+        // Store the filtered team data for histogram background
+        this.currentTeamFilteredData = teamFilteredData;
+
+        // Now apply shooter filter for the main display
+        let filteredData = teamFilteredData;
+        if (selectedShooters.length > 0) {
+            filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
         }
 
         console.log(`Filtered data: ${filteredData.length} of ${this.currentGameData.length} shots`);
@@ -3591,6 +3596,7 @@ class FloorballApp {
         }
 
         let team1, team2, team1Shots, team2Shots;
+        let team1FullShots, team2FullShots; // For background data
 
         // Check if a single shooter is selected
         if (this.selectedShooter) {
@@ -3598,13 +3604,19 @@ class FloorballApp {
             team1 = this.selectedShooter;
             team1Shots = data; // Already filtered to this shooter's shots
 
-            // Lower histogram/map: OPPONENT shots when this player is on the field
-            team2 = `Opponents (${this.selectedShooter} defending)`;
+            // Get full team data with current filters (but without shooter filter)
+            const teamFilteredData = this.currentTeamFilteredData || this.currentGameData;
 
             // Get the first team name from current game data
             const team1Name = this.currentGameData[0]?.team1;
 
-            team2Shots = this.currentGameData.filter(d => {
+            // Full team shots for background (with filters but without shooter filter)
+            team1FullShots = teamFilteredData.filter(d => d.shooting_team === team1Name);
+
+            // Lower histogram/map: OPPONENT shots when this player is on the field
+            team2 = `Opponents (${this.selectedShooter} defending)`;
+
+            team2Shots = teamFilteredData.filter(d => {
                 const playerName = this.selectedShooter;
                 // Only check OPPONENT shots (shots against your team)
                 const isOpponentShot = d.shooting_team && d.shooting_team !== team1Name;
@@ -3618,9 +3630,14 @@ class FloorballApp {
                 return isOpponentShot && playerOnField;
             });
 
+            // Full opponent shots for background
+            team2FullShots = teamFilteredData.filter(d => d.shooting_team && d.shooting_team !== team1Name);
+
             console.log(`Selected shooter: ${team1}`);
             console.log(`Shooter's shots: ${team1Shots.length}`);
+            console.log(`Team shots (background): ${team1FullShots.length}`);
             console.log(`Opponent shots when ${team1} defending: ${team2Shots.length}`);
+            console.log(`All opponent shots (background): ${team2FullShots.length}`);
         } else if (this.currentGameId === 'all') {
             // For "All Games" view: Team 1 vs All Opponents combined
             team1 = uniqueShootingTeams[0]; // Assuming first team is always your team
@@ -3682,6 +3699,18 @@ class FloorballApp {
         this.team2Name = team2;
         this.histogramWidth = histogramWidth;
         this.histogramHeight = histogramHeight;
+
+        // Store full team data for background if player is selected
+        if (this.selectedShooter) {
+            this.team1FullData = team1FullShots ? team1FullShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+            }) : null;
+            this.team2FullData = team2FullShots ? team2FullShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+            }) : null;
+        }
     }
 
     calculateSharedYMax(team1Shots, team2Shots) {
