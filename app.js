@@ -1109,11 +1109,19 @@ class FloorballApp {
         // Get unique shooters
         const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))].sort();
         const shooterSelect = document.getElementById('filter-shooter');
-        shooterSelect.innerHTML = '<option value="" selected>All Shooters</option>';
+
+        // Save current selection before rebuilding dropdown
+        const previouslySelected = Array.from(shooterSelect.selectedOptions).map(opt => opt.value);
+
+        shooterSelect.innerHTML = '<option value="">All Shooters</option>';
         shooters.forEach(shooter => {
             const option = document.createElement('option');
             option.value = shooter;
             option.textContent = shooter;
+            // Restore selection if this shooter was previously selected and still exists in new data
+            if (previouslySelected.includes(shooter)) {
+                option.selected = true;
+            }
             shooterSelect.appendChild(option);
         });
     }
@@ -1222,13 +1230,16 @@ class FloorballApp {
         // Calculate "on field" data if shooter is selected
         let onFieldData = null;
         if (this.selectedShooter) {
-            // IMPORTANT: Use currentGameData (all shots) not 'data' (filtered for shooter)
-            // Get the team names properly
+            // IMPORTANT: Use currentTeamFilteredData (result/type filters applied, but not shooter filter)
+            // This ensures result/type filters apply to the lower hexagon map
             const team1Name = this.currentGameData[0]?.team1;
             const team2Name = this.currentGameData[0]?.team2;
 
+            // Use filtered data (result/type filters) but not shooter-filtered
+            const dataForOnField = this.currentTeamFilteredData || this.currentGameData;
+
             // For opponent shots, we need ALL shots from the game, not just the selected shooter's shots
-            onFieldData = this.currentGameData.filter(d => {
+            onFieldData = dataForOnField.filter(d => {
                 const playerName = this.selectedShooter;
                 // For opponent shots: shooting team is NOT team1
                 const isOpponentShot = d.shooting_team && d.shooting_team !== team1Name;
@@ -3580,6 +3591,9 @@ class FloorballApp {
         if (this.team2HistGroup) {
             this.team2HistGroup.selectAll('.player-overlay').remove();
         }
+        // Clear stored full team data to prevent stale data
+        this.team1FullData = null;
+        this.team2FullData = null;
     }
 
     createXGHistograms(svg, data, fieldWidth, fieldHeight, margin) {
@@ -3611,8 +3625,9 @@ class FloorballApp {
             // Get the first team name from current game data
             const team1Name = this.currentGameData[0]?.team1;
 
-            // Full team shots for background (with filters but without shooter filter)
-            // Use currentGameData (no filters) for the background outline layer
+            // Full team shots for background (white outline) - uses currentGameData which contains
+            // only the currently selected game (either "All Games" or a specific game)
+            // No result/type filters applied to background - shows full team distribution
             team1FullShots = this.currentGameData.filter(d => d.shooting_team === team1Name);
 
             // Lower histogram/map: OPPONENT shots when this player is on the field
@@ -3632,14 +3647,15 @@ class FloorballApp {
                 return isOpponentShot && playerOnField;
             });
 
-            // Full opponent shots for background (no filters)
+            // Full opponent shots for background (white outline) - same game as team1FullShots
             team2FullShots = this.currentGameData.filter(d => d.shooting_team && d.shooting_team !== team1Name);
 
             console.log(`Selected shooter: ${team1}`);
+            console.log(`Current game ID: ${this.currentGameId}`);
             console.log(`Shooter's shots: ${team1Shots.length}`);
-            console.log(`Team shots (background): ${team1FullShots.length}`);
+            console.log(`Team shots (background - white outline): ${team1FullShots.length}`);
             console.log(`Opponent shots when ${team1} defending: ${team2Shots.length}`);
-            console.log(`All opponent shots (background): ${team2FullShots.length}`);
+            console.log(`All opponent shots (background - white outline): ${team2FullShots.length}`);
         } else if (this.currentGameId === 'all') {
             // For "All Games" view: Team 1 vs All Opponents combined
             // IMPORTANT: Get team name from unfiltered data to ensure consistent team identification
@@ -3683,6 +3699,22 @@ class FloorballApp {
             console.log(`Player selected - using independent Y scales for each histogram`);
         }
 
+        // Store full team data for background BEFORE drawing (so drawXGHistogram can access it)
+        if (this.selectedShooter) {
+            this.team1FullData = team1FullShots ? team1FullShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+            }) : null;
+            this.team2FullData = team2FullShots ? team2FullShots.filter(d => {
+                const xg = parseFloat(d.xg);
+                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
+            }) : null;
+        } else {
+            // Clear full data when no shooter selected
+            this.team1FullData = null;
+            this.team2FullData = null;
+        }
+
         // Create histogram for Team 1 (upper half)
         const team1HistGroup = svg.append('g')
             .attr('class', 'xg-histogram-team1')
@@ -3704,18 +3736,6 @@ class FloorballApp {
         this.team2Name = team2;
         this.histogramWidth = histogramWidth;
         this.histogramHeight = histogramHeight;
-
-        // Store full team data for background if player is selected
-        if (this.selectedShooter) {
-            this.team1FullData = team1FullShots ? team1FullShots.filter(d => {
-                const xg = parseFloat(d.xg);
-                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
-            }) : null;
-            this.team2FullData = team2FullShots ? team2FullShots.filter(d => {
-                const xg = parseFloat(d.xg);
-                return !isNaN(xg) && xg >= 0 && xg <= 0.6;
-            }) : null;
-        }
     }
 
     calculateSharedYMax(team1Shots, team2Shots) {
