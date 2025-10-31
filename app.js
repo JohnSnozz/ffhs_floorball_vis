@@ -1091,7 +1091,8 @@ class FloorballApp {
                 this.currentGameData = data;
                 this.currentGameId = gameId;
                 this.populateFilters(data);
-                await this.createCharts(data);
+                // Apply current filters instead of directly creating charts with unfiltered data
+                this.applyFilters();
             } else {
                 console.log('No shots found for this game');
                 this.currentGameData = null;
@@ -3611,7 +3612,8 @@ class FloorballApp {
             const team1Name = this.currentGameData[0]?.team1;
 
             // Full team shots for background (with filters but without shooter filter)
-            team1FullShots = teamFilteredData.filter(d => d.shooting_team === team1Name);
+            // Use currentGameData (no filters) for the background outline layer
+            team1FullShots = this.currentGameData.filter(d => d.shooting_team === team1Name);
 
             // Lower histogram/map: OPPONENT shots when this player is on the field
             team2 = `Opponents (${this.selectedShooter} defending)`;
@@ -3630,8 +3632,8 @@ class FloorballApp {
                 return isOpponentShot && playerOnField;
             });
 
-            // Full opponent shots for background
-            team2FullShots = teamFilteredData.filter(d => d.shooting_team && d.shooting_team !== team1Name);
+            // Full opponent shots for background (no filters)
+            team2FullShots = this.currentGameData.filter(d => d.shooting_team && d.shooting_team !== team1Name);
 
             console.log(`Selected shooter: ${team1}`);
             console.log(`Shooter's shots: ${team1Shots.length}`);
@@ -3640,7 +3642,10 @@ class FloorballApp {
             console.log(`All opponent shots (background): ${team2FullShots.length}`);
         } else if (this.currentGameId === 'all') {
             // For "All Games" view: Team 1 vs All Opponents combined
-            team1 = uniqueShootingTeams[0]; // Assuming first team is always your team
+            // IMPORTANT: Get team name from unfiltered data to ensure consistent team identification
+            // If we use filtered data, the team order might change (e.g., when filtering by "Missed")
+            const allTeamsUnfiltered = [...new Set(this.currentGameData.map(d => d.shooting_team))].filter(t => t);
+            team1 = allTeamsUnfiltered[0]; // Assuming first team is always your team
             team2 = 'All Opponents';
             team1Shots = data.filter(d => d.shooting_team === team1);
             team2Shots = data.filter(d => d.shooting_team !== team1); // All other teams
@@ -3685,10 +3690,10 @@ class FloorballApp {
 
         this.drawXGHistogram(team1HistGroup, team1Shots, histogramWidth, histogramHeight, team1, 'team1', sharedYMax);
 
-        // Create histogram for Team 2 (lower half) - moved 1 cell up
+        // Create histogram for Team 2 (lower half) - moved down 1 cell to align x-axis with field bottom
         const team2HistGroup = svg.append('g')
             .attr('class', 'xg-histogram-team2')
-            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100 - cellHeight})`);
+            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100 + cellHeight})`);
 
         this.drawXGHistogram(team2HistGroup, team2Shots, histogramWidth, histogramHeight, team2, 'team2', sharedYMax);
 
@@ -4030,30 +4035,32 @@ class FloorballApp {
                 .text(`Avg: ${avgXG.toFixed(3)}`);
         }
 
-        // Add result type legend (horizontal below the chart)
-        const legendGroup = group.append('g')
-            .attr('class', 'result-legend')
-            .attr('transform', `translate(0, ${height + 45})`);
+        // Add result type legend (horizontal below the chart) - only for team1
+        if (teamClass !== 'team2') {
+            const legendGroup = group.append('g')
+                .attr('class', 'result-legend')
+                .attr('transform', `translate(0, ${height + 45})`);
 
-        resultTypes.forEach((result, i) => {
-            const legendItem = legendGroup.append('g')
-                .attr('transform', `translate(${i * 45}, 0)`);
+            resultTypes.forEach((result, i) => {
+                const legendItem = legendGroup.append('g')
+                    .attr('transform', `translate(${i * 45}, 0)`);
 
-            legendItem.append('rect')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('width', 10)
-                .attr('height', 10)
-                .style('fill', colorScale(result))
-                .style('opacity', 0.8);
+                legendItem.append('rect')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width', 10)
+                    .attr('height', 10)
+                    .style('fill', colorScale(result))
+                    .style('opacity', 0.8);
 
-            legendItem.append('text')
-                .attr('x', 12)
-                .attr('y', 8)
-                .style('font-size', '9px')
-                .style('fill', '#A0A0A8')
-                .text(result);
-        });
+                legendItem.append('text')
+                    .attr('x', 12)
+                    .attr('y', 8)
+                    .style('font-size', '9px')
+                    .style('fill', '#A0A0A8')
+                    .text(result);
+            });
+        }
 
         // Store data for player overlay
         group.datum({

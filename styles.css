@@ -876,7 +876,18 @@ main {
 }
 
 .filter-group select[multiple] {
-    min-height: 60px;
+    min-height: 150px;
+}
+
+#filter-shooter {
+    font-size: 16px !important;
+    padding: 8px !important;
+    min-height: 200px !important;
+}
+
+#filter-shooter option {
+    padding: 6px;
+    font-size: 16px;
 }
 
 .sort-btn {
