@@ -109,7 +109,8 @@
                                 <div class="filters-container">
                                     <div class="filter-group">
                                         <label for="filter-shooter">Shooter:</label>
-                                        <select id="filter-shooter" multiple size="12">
+                                        <input type="text" id="shooter-search" placeholder="Search players..." style="margin-bottom: 5px; width: 100%; padding: 5px; box-sizing: border-box;">
+                                        <select id="filter-shooter" multiple size="8">
                                             <option value="">All Shooters</option>
                                         </select>
                                     </div>
@@ -139,7 +140,7 @@
 
                         <div class="dashboard-main">
                             <!-- TEMPORARY DEV GRID - Remove when dashboard layout is finalized -->
-                            <div class="dev-grid-overlay"></div>
+                            <div class="dev-grid-overlay hidden"></div>
                             <!-- END TEMPORARY DEV GRID -->
                             <script>
                                 // Generate grid cells dynamically
@@ -184,6 +185,12 @@
                             <select id="corrections-game-select">
                                 <option value="">Choose a game...</option>
                             </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="game-alias-input">Display Game Name:</label>
+                            <input type="text" id="game-alias-input" placeholder="Enter alias for display..." disabled>
+                            <button id="save-alias-btn" class="save-alias-btn" disabled>Save Alias</button>
                         </div>
 
                         <div class="corrections-info">

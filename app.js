@@ -198,6 +198,14 @@ class FloorballApp {
             )
         `);
 
+        this.db.run(`
+            CREATE TABLE IF NOT EXISTS game_aliases (
+                game_id INTEGER PRIMARY KEY,
+                alias TEXT NOT NULL,
+                FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
+            )
+        `);
+
         console.log('Database tables created successfully');
 
         this.createOrUpdateViews();
@@ -328,6 +336,22 @@ class FloorballApp {
                     console.log('is_turnover column added');
                     await debugLog('Migration: Added is_turnover column to shot_corrections');
                 }
+            }
+
+            if (!tableNames.includes('game_aliases')) {
+                console.log('Creating game_aliases table...');
+                await debugLog('Migration: Creating game_aliases table');
+
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS game_aliases (
+                        game_id INTEGER PRIMARY KEY,
+                        alias TEXT NOT NULL,
+                        FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
+                    )
+                `);
+
+                console.log('game_aliases table created');
+                await debugLog('Migration: game_aliases table created successfully');
             }
 
         } catch (error) {
@@ -550,6 +574,15 @@ class FloorballApp {
         if (correctionsGameSelect) {
             correctionsGameSelect.addEventListener('change', (e) => {
                 this.loadCorrectionsForGame(e.target.value);
+                this.loadGameAlias(e.target.value);
+            });
+        }
+
+        // Game alias save button
+        const saveAliasBtn = document.getElementById('save-alias-btn');
+        if (saveAliasBtn) {
+            saveAliasBtn.addEventListener('click', () => {
+                this.saveGameAlias();
             });
         }
     }
@@ -569,6 +602,29 @@ class FloorballApp {
         if (shooterSelect) {
             shooterSelect.addEventListener('change', () => {
                 this.applyFilters();
+            });
+        }
+
+        // Setup shooter search filter
+        const shooterSearch = document.getElementById('shooter-search');
+        if (shooterSearch) {
+            shooterSearch.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const options = shooterSelect.querySelectorAll('option');
+
+                options.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = '';
+                        return;
+                    }
+
+                    const playerName = option.textContent.toLowerCase();
+                    if (playerName.includes(searchTerm)) {
+                        option.style.display = '';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
             });
         }
     }
@@ -1031,24 +1087,104 @@ class FloorballApp {
     async loadGamesList() {
         try {
             const games = this.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
-            const gameSelect = document.getElementById('selected-game');
+            const aliases = this.db.exec("SELECT game_id, alias FROM game_aliases");
 
+            const aliasMap = {};
+            if (aliases.length > 0) {
+                aliases[0].values.forEach(([gameId, alias]) => {
+                    aliasMap[gameId] = alias;
+                });
+            }
+
+            const gameSelect = document.getElementById('selected-game');
             gameSelect.innerHTML = '<option value="all" selected>All Games</option>';
+
+            const correctionsGameSelect = document.getElementById('corrections-game-select');
+            if (correctionsGameSelect) {
+                correctionsGameSelect.innerHTML = '<option value="">Choose a game...</option>';
+            }
 
             if (games.length > 0) {
                 games[0].values.forEach(game => {
                     const [gameId, gameName, gameDate, team1, team2] = game;
+                    const displayName = aliasMap[gameId] || `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
+
                     const option = document.createElement('option');
                     option.value = gameId;
-                    option.textContent = `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
+                    option.textContent = displayName;
                     gameSelect.appendChild(option);
+
+                    if (correctionsGameSelect) {
+                        const corrOption = document.createElement('option');
+                        corrOption.value = gameId;
+                        corrOption.textContent = displayName;
+                        correctionsGameSelect.appendChild(corrOption);
+                    }
                 });
             }
 
-            // Automatically load all games when list is refreshed
             this.loadGameData('all');
         } catch (error) {
             console.error('Error loading games:', error);
+        }
+    }
+
+    loadGameAlias(gameId) {
+        const aliasInput = document.getElementById('game-alias-input');
+        const saveBtn = document.getElementById('save-alias-btn');
+
+        if (!gameId) {
+            aliasInput.value = '';
+            aliasInput.disabled = true;
+            saveBtn.disabled = true;
+            return;
+        }
+
+        aliasInput.disabled = false;
+        saveBtn.disabled = false;
+
+        try {
+            const result = this.db.exec("SELECT alias FROM game_aliases WHERE game_id = ?", [gameId]);
+            if (result.length > 0 && result[0].values.length > 0) {
+                aliasInput.value = result[0].values[0][0];
+            } else {
+                aliasInput.value = '';
+            }
+        } catch (error) {
+            console.error('Error loading game alias:', error);
+            aliasInput.value = '';
+        }
+    }
+
+    async saveGameAlias() {
+        const gameId = document.getElementById('corrections-game-select').value;
+        const alias = document.getElementById('game-alias-input').value.trim();
+
+        if (!gameId) {
+            alert('Please select a game first');
+            return;
+        }
+
+        try {
+            if (alias) {
+                const existing = this.db.exec("SELECT game_id FROM game_aliases WHERE game_id = ?", [gameId]);
+
+                if (existing.length > 0 && existing[0].values.length > 0) {
+                    this.db.run("UPDATE game_aliases SET alias = ? WHERE game_id = ?", [alias, gameId]);
+                } else {
+                    this.db.run("INSERT INTO game_aliases (game_id, alias) VALUES (?, ?)", [gameId, alias]);
+                }
+            } else {
+                this.db.run("DELETE FROM game_aliases WHERE game_id = ?", [gameId]);
+            }
+
+            await this.saveDatabaseToFile();
+            await this.loadGamesList();
+
+            alert('Game alias saved successfully!');
+        } catch (error) {
+            console.error('Error saving game alias:', error);
+            alert('Error saving game alias: ' + error.message);
         }
     }
 
@@ -1107,7 +1243,15 @@ class FloorballApp {
 
     populateFilters(data) {
         // Get unique shooters
-        const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))].sort();
+        const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))];
+
+        // Sort by jersey number (extract number after #)
+        shooters.sort((a, b) => {
+            const numA = parseInt(a.match(/#(\d+)/)?.[1] || '999');
+            const numB = parseInt(b.match(/#(\d+)/)?.[1] || '999');
+            return numA - numB;
+        });
+
         const shooterSelect = document.getElementById('filter-shooter');
 
         // Save current selection before rebuilding dropdown
