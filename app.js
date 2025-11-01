@@ -4801,6 +4801,23 @@ class FloorballApp {
                         return false;
                     }
 
+                    if (this.currentFilters.onfield && this.currentFilters.onfield.length > 0) {
+                        const onFieldPlayers = [
+                            displayData.t1lw, displayData.t1c, displayData.t1rw,
+                            displayData.t1ld, displayData.t1rd, displayData.t1g, displayData.t1x,
+                            displayData.t2lw, displayData.t2c, displayData.t2rw,
+                            displayData.t2ld, displayData.t2rd, displayData.t2g, displayData.t2x
+                        ].filter(p => p);
+
+                        const hasSelectedPlayer = this.currentFilters.onfield.some(player =>
+                            onFieldPlayers.includes(player)
+                        );
+
+                        if (!hasSelectedPlayer) {
+                            return false;
+                        }
+                    }
+
                     return true;
                 });
             }
@@ -4911,7 +4928,14 @@ class FloorballApp {
             </div>
             <div class="filter-group">
                 <label>Shooter:</label>
-                <select id="filter-shooter" multiple size="5">
+                <select id="filter-shooter" multiple size="3">
+                    <option value="">All</option>
+                    ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>On Field:</label>
+                <select id="filter-onfield" multiple size="3">
                     <option value="">All</option>
                     ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
                 </select>
@@ -5003,9 +5027,14 @@ class FloorballApp {
         });
 
         table.appendChild(tbody);
+
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'corrections-table-wrapper';
+        tableWrapper.appendChild(table);
+
         container.innerHTML = '';
         container.appendChild(controlsWrapper);
-        container.appendChild(table);
+        container.appendChild(tableWrapper);
 
         const sortAscBtn = document.getElementById('sort-asc');
         const sortDescBtn = document.getElementById('sort-desc');
@@ -5028,6 +5057,7 @@ class FloorballApp {
             document.getElementById('filter-type').selectedIndex = -1;
             document.getElementById('filter-turnover').value = '';
             document.getElementById('filter-shooter').selectedIndex = -1;
+            document.getElementById('filter-onfield').selectedIndex = -1;
             this.currentFilters = null;
             this.applyCorrectionsFilters();
         });
@@ -5091,6 +5121,7 @@ class FloorballApp {
         const typeFilter = document.getElementById('filter-type');
         const turnoverFilter = document.getElementById('filter-turnover');
         const shooterFilter = document.getElementById('filter-shooter');
+        const onFieldFilter = document.getElementById('filter-onfield');
 
         const selectedResults = Array.from(resultFilter.selectedOptions)
             .map(opt => opt.value)
@@ -5104,11 +5135,16 @@ class FloorballApp {
             .map(opt => opt.value)
             .filter(v => v !== '');
 
+        const selectedOnField = Array.from(onFieldFilter.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
+
         this.currentFilters = {
             results: selectedResults.length > 0 ? selectedResults : null,
             types: selectedTypes.length > 0 ? selectedTypes : null,
             turnover: turnoverFilter.value !== '' ? turnoverFilter.value : null,
-            shooters: selectedShooters.length > 0 ? selectedShooters : null
+            shooters: selectedShooters.length > 0 ? selectedShooters : null,
+            onfield: selectedOnField.length > 0 ? selectedOnField : null
         };
 
         const gameId = document.getElementById('corrections-game-select').value;

@@ -681,24 +681,51 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 15px;
+    padding: 10px;
     background: #1e2128;
     border-radius: 8px;
+}
+
+.corrections-controls .form-group label {
+    font-size: 12px;
+    margin-bottom: 4px;
 }
 
 .corrections-info {
     color: #A0A0A8;
-    font-size: 14px;
+    font-size: 12px;
+}
+
+#corrections-game-select {
+    max-width: 400px;
+    padding: 6px;
+    font-size: 12px;
+}
+
+#game-alias-input {
+    max-width: 300px;
+    padding: 6px;
+    font-size: 12px;
+}
+
+#save-alias-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-left: 10px;
 }
 
 .corrections-table-container {
-    overflow-x: auto;
-    overflow-y: visible;
     background: #1e2128;
     border-radius: 8px;
     padding: 15px;
     max-width: 100%;
+}
+
+.corrections-table-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
 }
 
 .corrections-table {
@@ -805,99 +832,101 @@ main {
 }
 
 .controls-wrapper {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     display: flex;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .sorting-controls {
-    padding: 10px;
+    padding: 6px;
     background: #252830;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: 0 0 auto;
 }
 
 .sorting-controls label {
     color: #A0A0A8;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 .sorting-controls select {
-    padding: 5px 10px;
+    padding: 4px 8px;
     background: #2a2d35;
     border: 1px solid #3a3d45;
     border-radius: 4px;
     color: #e0e0e8;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .filter-controls {
-    padding: 10px;
+    padding: 6px;
     background: #252830;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: 1 1 auto;
     flex-wrap: wrap;
 }
 
 .filter-controls > label {
     color: #A0A0A8;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
 }
 
 .filter-group label {
     color: #A0A0A8;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
 }
 
 .filter-group select {
-    padding: 3px 6px;
+    padding: 2px 4px;
     background: #2a2d35;
     border: 1px solid #3a3d45;
     border-radius: 3px;
     color: #e0e0e8;
-    font-size: 11px;
+    font-size: 10px;
     min-width: 80px;
 }
 
 .filter-group select[multiple] {
-    min-height: 150px;
+    min-height: 60px;
 }
 
-#filter-shooter {
-    font-size: 16px !important;
-    padding: 8px !important;
-    min-height: 200px !important;
+#filter-shooter,
+#filter-onfield {
+    font-size: 10px;
+    padding: 2px 4px;
+    min-height: 60px;
 }
 
-#filter-shooter option {
-    padding: 6px;
-    font-size: 16px;
+#filter-shooter option,
+#filter-onfield option {
+    padding: 2px;
+    font-size: 10px;
 }
 
 .sort-btn {
-    padding: 5px 12px;
+    padding: 4px 10px;
     background: #4a9d9c;
     color: white;
     border: none;
+    font-size: 11px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
     transition: background 0.2s;
     white-space: nowrap;
 }
