@@ -848,3 +848,145 @@ Code is version controlled. Check git log for detailed change history.
 
 *Last Updated: 2025-01-01*
 *For Claude Code AI Assistant - This document explains the entire codebase structure and logic*
+
+---
+
+## Spider Diagram Module (NEW)
+
+### Purpose
+Displays performance metrics between the two xG histograms, showing:
+- Shot result percentages (Blocked, Missed, Saved, Goal)
+- Shot count
+- Advanced metrics (Corsi, xG +/-, xSOG +/-)
+
+### Location
+- **File**: `js/modules/spiderDiagram.js`
+- **Position**: Between upper and lower histograms
+- **Integration**: See `SPIDER_DIAGRAM_INTEGRATION.md`
+
+### Metrics Calculated
+
+#### 1. Shot Result Percentages
+- **Blocked %**: `(blocked_shots / total_shots) × 100`
+- **Missed %**: `(missed_shots / total_shots) × 100`
+- **Saved %**: `(saved_shots / total_shots) × 100`
+- **Goal %**: `(goal_shots / total_shots) × 100`
+
+#### 2. Corsi
+```
+Corsi For (CF) = shots + blocks + misses (for team/player)
+Corsi Against (CA) = shots + blocks + misses (against, when on field)
+Corsi = CF - CA
+```
+
+#### 3. xG Plus-Minus
+```
+xG For = sum of xG for shots by team/player
+xG Against = sum of xG for shots against (when player on field)
+xG +/- = xG For - xG Against
+```
+
+#### 4. xSOG Plus-Minus
+```
+xSOG For = sum of xG for shots on goal (Saved + Goal) by team/player
+xSOG Against = sum of xG for shots on goal against (when player on field)
+xSOG +/- = xSOG For - xSOG Against
+```
+
+### Filter Behavior
+
+**Affected by:**
+- Shooter selection (player vs team)
+- Game selection (specific game vs all games)
+- Type filters (Direct, One-timer, etc.)
+
+**NOT affected by:**
+- Result filters (Goal, Saved, Missed, Blocked)
+
+**Reasoning**: Result filters don't affect the spider diagram because the diagram itself shows the breakdown of all results.
+
+### Display Modes
+
+#### Mode 1: All Games + All Shooters
+- **Blue shape**: Team metrics
+- **White outline**: None (or could show league average if implemented)
+
+#### Mode 2: All Games + Single Player
+- **Blue shape**: Player metrics across all games
+- **White outline**: Team metrics across all games
+
+#### Mode 3: Single Game + All Shooters
+- **Blue shape**: Team1 metrics for this game
+- **White outline**: Team2 metrics for comparison
+
+#### Mode 4: Single Game + Single Player
+- **Blue shape**: Player metrics for this game
+- **White outline**: Team metrics for this game
+
+### D3 Implementation
+
+Uses D3's radial coordinate system:
+
+```javascript
+// Radial line generator
+const radarLine = d3.lineRadial()
+    .angle((d, i) => angleScale(i))
+    .radius(d => radialScale(d.value))
+    .curve(d3.curveLinearClosed);
+
+// Radial scale
+const radialScale = d3.scaleLinear()
+    .domain([0, 100])
+    .range([0, radius]);
+
+// Angle scale
+const angleScale = d3.scaleLinear()
+    .domain([0, numAxes])
+    .range([0, 2 * Math.PI]);
+```
+
+### Value Normalization
+
+Different metrics are normalized differently:
+
+**Percentages** (0-100%):
+- Already in correct range
+- Maps directly to 0-100 for display
+
+**Shot Count**:
+- Normalized to max shot count in dataset
+- `(value / max) × 100`
+
+**Plus-Minus Metrics** (can be negative):
+- Normalized so 0 = center (50)
+- Positive values: 50-100
+- Negative values: 0-50
+- Formula: `((value / max) × 50) + 50`
+
+### Color Scheme
+
+Matches histogram colors for consistency:
+
+- **Blocked**: `#E06B47` (Orange-red)
+- **Missed**: `#E8B44F` (Yellow)
+- **Saved**: `#5B8DBE` (Blue)
+- **Goal**: `#7FB069` (Green)
+- **Shot Count**: `#A0A0A8` (Gray)
+- **Corsi**: `#9B7EBD` (Purple)
+- **xG +/-**: `#E07BB0` (Pink)
+- **xSOG +/-**: `#4ECDC4` (Teal)
+
+### Integration with Existing Code
+
+The spider diagram:
+1. Receives the same filtered data as histograms
+2. Calculates metrics independently
+3. Updates automatically when filters change
+4. Shows white outline for comparison (same as histograms)
+
+**Key Integration Point**: Called in `createXGHistograms()` after both histograms are drawn, using the same data sources.
+
+---
+
+*Spider Diagram Module Added: 2025-01-01*
+
