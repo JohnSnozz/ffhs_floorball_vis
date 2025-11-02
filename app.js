@@ -1227,6 +1227,7 @@ class FloorballApp {
                 this.currentGameData = data;
                 this.currentGameId = gameId;
                 this.populateFilters(data);
+                this.updateGoalkeeperHistogram();
                 // Apply current filters instead of directly creating charts with unfiltered data
                 this.applyFilters();
             } else {
@@ -1268,6 +1269,31 @@ class FloorballApp {
             }
             shooterSelect.appendChild(option);
         });
+    }
+
+    updateGoalkeeperHistogram() {
+        if (typeof goalkeeperHistogram === 'undefined') {
+            return;
+        }
+
+        let allGamesData = null;
+        try {
+            const allShots = this.db.exec(`SELECT * FROM shots ORDER BY game_id, time`);
+            if (allShots.length > 0 && allShots[0].values.length > 0) {
+                const columns = allShots[0].columns;
+                allGamesData = allShots[0].values.map(row => {
+                    const obj = {};
+                    columns.forEach((col, index) => {
+                        obj[col] = row[index];
+                    });
+                    return obj;
+                });
+            }
+        } catch (error) {
+            console.error('Error loading all games data for goalkeeper histogram:', error);
+        }
+
+        goalkeeperHistogram.setData(this.currentGameData, allGamesData);
     }
 
     applyFilters() {
@@ -2019,9 +2045,24 @@ class FloorballApp {
             .range(['#10B981', '#00D9FF', '#F59E0B', '#EF4444']);
 
         // Create tooltip
-        const tooltip = d3.select('body').select('.tooltip').empty()
-            ? d3.select('body').append('div').attr('class', 'tooltip').style('opacity', 0)
-            : d3.select('body').select('.tooltip');
+        let tooltip = d3.select('body').select('.tooltip');
+        if (tooltip.empty()) {
+            tooltip = d3.select('body').append('div').attr('class', 'tooltip');
+        }
+
+        tooltip
+            .style('position', 'absolute')
+            .style('opacity', 0)
+            .style('background', 'rgba(0, 0, 0, 0.9)')
+            .style('color', '#fff')
+            .style('border', '1px solid rgba(255, 255, 255, 0.2)')
+            .style('border-radius', '0px')
+            .style('padding', '10px')
+            .style('font-size', '13px')
+            .style('pointer-events', 'none')
+            .style('z-index', '10000')
+            .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.5)')
+            .style('line-height', '1.4');
 
         // Create scale for point size based on xG (0 to 1)
         const radiusScale = d3.scaleSqrt()
@@ -2445,9 +2486,24 @@ class FloorballApp {
             .range([0.4, 1.0]); // Smaller range for split view
 
         // Tooltip
-        const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
-            ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
-            : d3.select('body').select('.heatmap-tooltip');
+        let tooltip = d3.select('body').select('.heatmap-tooltip');
+        if (tooltip.empty()) {
+            tooltip = d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip');
+        }
+
+        tooltip
+            .style('position', 'absolute')
+            .style('opacity', 0)
+            .style('background', 'rgba(0, 0, 0, 0.9)')
+            .style('color', '#fff')
+            .style('border', '1px solid rgba(255, 255, 255, 0.2)')
+            .style('border-radius', '0px')
+            .style('padding', '10px')
+            .style('font-size', '13px')
+            .style('pointer-events', 'none')
+            .style('z-index', '10000')
+            .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.5)')
+            .style('line-height', '1.4');
 
         // Store hexbin data for debugging - fixed to not break on d.map
         const hexbinDebugKey = `${position}_${this.selectedShooter || 'all'}`;
@@ -2973,9 +3029,24 @@ class FloorballApp {
                 .range([0.3, 1.2]);
 
             // Create tooltip
-            const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
-                ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
-                : d3.select('body').select('.heatmap-tooltip');
+            let tooltip = d3.select('body').select('.heatmap-tooltip');
+            if (tooltip.empty()) {
+                tooltip = d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip');
+            }
+
+            tooltip
+                .style('position', 'absolute')
+                .style('opacity', 0)
+                .style('background', 'rgba(0, 0, 0, 0.9)')
+                .style('color', '#fff')
+                .style('border', '1px solid rgba(255, 255, 255, 0.2)')
+                .style('border-radius', '0px')
+                .style('padding', '10px')
+                .style('font-size', '13px')
+                .style('pointer-events', 'none')
+                .style('z-index', '10000')
+                .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.5)')
+                .style('line-height', '1.4');
 
             // Draw hexagons
             const hexagons = group.selectAll('.hexagon')
@@ -3134,9 +3205,24 @@ class FloorballApp {
             heatmapLog.push(`Size scale created with max: ${d3.max(filteredHexData, d => d.total)} shots`);
 
             // Create tooltip
-            const tooltip = d3.select('body').select('.heatmap-tooltip').empty()
-                ? d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip').style('opacity', 0)
-                : d3.select('body').select('.heatmap-tooltip');
+            let tooltip = d3.select('body').select('.heatmap-tooltip');
+            if (tooltip.empty()) {
+                tooltip = d3.select('body').append('div').attr('class', 'heatmap-tooltip tooltip');
+            }
+
+            tooltip
+                .style('position', 'absolute')
+                .style('opacity', 0)
+                .style('background', 'rgba(0, 0, 0, 0.9)')
+                .style('color', '#fff')
+                .style('border', '1px solid rgba(255, 255, 255, 0.2)')
+                .style('border-radius', '0px')
+                .style('padding', '10px')
+                .style('font-size', '13px')
+                .style('pointer-events', 'none')
+                .style('z-index', '10000')
+                .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.5)')
+                .style('line-height', '1.4');
             heatmapLog.push('Tooltip created');
 
             // Store comprehensive hexbin tracking data
