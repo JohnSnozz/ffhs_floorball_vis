@@ -4,16 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Floorball Statistics Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/visualizations.css">
+    <link rel="stylesheet" href="css/goalkeeper.css">
+    <link rel="stylesheet" href="css/import.css">
+    <link rel="stylesheet" href="css/corrections.css">
+    <link rel="stylesheet" href="css/dev-tools.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="dev-grid.js" defer></script>
     <script src="gkhistogram.js" defer></script>
     <script src="app.js" defer></script>
 </head>
 <body>
     <div class="container">
-        <header style="display: none;">
+        <header class="hidden">
         </header>
         
         <main>
@@ -22,7 +29,7 @@
                 <div class="dashboard-section">
                     <div class="dashboard-header">
                         <h2>Import Data</h2>
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="header-controls">
                             <button id="toggle-dev-grid-import" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
                             <div class="hamburger-menu">
                                 <button class="hamburger-btn" id="hamburger-btn-import">
@@ -84,7 +91,7 @@
                     
                     <div class="upload-section">
                         <div class="file-upload">
-                            <input type="file" id="csv-file" accept=".csv" style="display: none;">
+                            <input type="file" id="csv-file" accept=".csv" class="hidden">
                             <button class="upload-btn" onclick="document.getElementById('csv-file').click()">
                                 Choose CSV File
                             </button>
@@ -109,7 +116,7 @@
                 <div class="dashboard-section">
                     <div class="dashboard-header">
                         <h2>Statistics Dashboard</h2>
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="header-controls">
                             <button id="toggle-dev-grid" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
                             <button id="toggle-containers-dev" class="dev-grid-toggle-btn">Toggle Containers Dev</button>
                             <div class="hamburger-menu">
@@ -169,7 +176,7 @@
                                 <div class="filters-container">
                                     <div class="filter-group">
                                         <label for="filter-shooter">Shooter:</label>
-                                        <input type="text" id="shooter-search" placeholder="Search players..." style="margin-bottom: 5px; width: 100%; padding: 5px; box-sizing: border-box;">
+                                        <input type="text" id="shooter-search" placeholder="Search players...">
                                         <select id="filter-shooter" multiple size="8">
                                             <option value="">All Shooters</option>
                                         </select>
@@ -199,38 +206,7 @@
                         </div>
 
                         <div class="dashboard-main">
-                            <!-- TEMPORARY DEV GRID - Remove when dashboard layout is finalized -->
                             <div class="dev-grid-overlay hidden"></div>
-                            <!-- END TEMPORARY DEV GRID -->
-                            <script>
-                                // Generate grid cells dynamically
-                                const gridOverlay = document.querySelector('.dev-grid-overlay');
-                                const rows = 10;
-                                const cols = 15;
-                                const letters = 'ABCDEFGHIJ';
-                                for (let i = 0; i < rows; i++) {
-                                    for (let j = 0; j < cols; j++) {
-                                        const cell = document.createElement('div');
-                                        cell.className = 'dev-grid-cell';
-                                        if (i === 9) {
-                                            cell.classList.add('half-height');
-                                        }
-                                        cell.dataset.cell = `${letters[i]}${j + 1}`;
-                                        cell.innerHTML = `<span>${letters[i]}${j + 1}</span>`;
-                                        gridOverlay.appendChild(cell);
-                                    }
-                                }
-
-                                // Toggle dev grid
-                                document.getElementById('toggle-dev-grid').addEventListener('click', function() {
-                                    gridOverlay.classList.toggle('hidden');
-                                });
-
-                                // Toggle containers dev
-                                document.getElementById('toggle-containers-dev').addEventListener('click', function() {
-                                    document.body.classList.toggle('dev-containers-visible');
-                                });
-                            </script>
                             <div class="field-container">
                                 <div class="chart-section">
                                     <div id="shot-map-chart" class="chart shot-map"></div>
@@ -264,7 +240,7 @@
                 <div class="dashboard-section">
                     <div class="dashboard-header">
                         <h2>Corrections</h2>
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="header-controls">
                             <button id="toggle-dev-grid-corrections" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
                             <div class="hamburger-menu">
                                 <button class="hamburger-btn" id="hamburger-btn-corrections">

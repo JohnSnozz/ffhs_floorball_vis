@@ -1,0 +1,20 @@
+.middle-stats {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    background-color: #1A1A1D;
+    left: var(--middle-stats-left, 0);
+    right: auto;
+}
+
+.middle-stats > * {
+    pointer-events: auto;
+}

@@ -1,0 +1,141 @@
+.field-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    width: var(--field-width, auto);
+    max-width: var(--field-width, none);
+}
+
+.field-container > * {
+    pointer-events: auto;
+    height: 100%;
+}
+
+.chart-section.full-width {
+    grid-column: 1 / -1;
+}
+
+.chart-section {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    overflow: visible;
+    height: 100%;
+    box-sizing: border-box;
+    width: var(--field-width, auto);
+    max-width: var(--field-width, none);
+}
+
+.chart {
+    height: 100%;
+    position: relative;
+}
+
+.shot-map {
+    min-height: 500px;
+}
+
+.court-boundary {
+    fill: none;
+    stroke: #333;
+    stroke-width: 2px;
+}
+
+.goal-area {
+    fill: none;
+    stroke: #666;
+    stroke-width: 1.5px;
+}
+
+.center-circle {
+    fill: none;
+    stroke: #666;
+    stroke-width: 1.5px;
+}
+
+.hexagon {
+    stroke: #fff;
+    stroke-width: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hexagon:hover {
+    opacity: 1 !important;
+    stroke-width: 2px;
+    filter: brightness(1.1);
+}
+
+.hexagon-group text {
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.heatmap-legend,
+.size-legend {
+    pointer-events: none;
+}
+
+.heatmap-tooltip {
+    background: rgba(0, 0, 0, 0.85) !important;
+}
+
+.grid-cell {
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.grid-cell:hover {
+    opacity: 1 !important;
+    stroke-width: 2px !important;
+}
+
+.shot-map-legend {
+    font-size: 12px;
+}
+
+.shot-map-legend text {
+    fill: #A0A0A8;
+}
+
+.axis {
+    font-size: 12px;
+    color: #A0A0A8;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #3D3D42;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    fill: #A0A0A8;
+}
+
+.bar {
+    fill: #007bff;
+    transition: fill 0.3s ease;
+}
+
+.bar:hover {
+    fill: #0056b3;
+}
+
+.line {
+    fill: none;
+    stroke: #007bff;
+    stroke-width: 2px;
+}
+
+.dot {
+    fill: #007bff;
+    stroke: #fff;
+    stroke-width: 2px;
+}

@@ -1,0 +1,94 @@
+.goalkeeper-stats-section {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 0;
+    box-sizing: border-box;
+    z-index: 10;
+    justify-content: flex-start;
+    left: auto;
+    right: 20px;
+}
+
+.goalkeeper-selector {
+    padding: 8px;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #1A1A1D;
+    color: #E5E5E7;
+    flex-shrink: 0;
+}
+
+.goalkeeper-selector:focus {
+    outline: none;
+    border-color: #00D9FF;
+}
+
+.goalkeeper-histogram {
+    height: 228px;
+    min-height: 0;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.goalkeeper-histogram svg {
+    width: 100%;
+    height: 100%;
+}
+
+.goalkeeper-dumbbell {
+    height: 160px;
+    min-height: 0;
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.goalkeeper-dumbbell svg {
+    width: 100%;
+    height: 100%;
+}
+
+.gk-tooltip-header {
+    margin-bottom: 8px;
+    font-weight: bold;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.gk-tooltip-label {
+    display: inline-block;
+    width: 90px;
+}
+
+.gk-tooltip-value {
+    display: inline-block;
+    width: 60px;
+    text-align: right;
+}
+
+.gk-tooltip-value-white {
+    color: #fff;
+}
+
+.gk-tooltip-row {
+    margin-bottom: 3px;
+}
+
+.gk-tooltip-row-last {
+    margin-bottom: 5px;
+}
+
+.gk-tooltip-label-saved {
+    color: #10B981;
+}
+
+.gk-tooltip-label-goal {
+    color: #7C3AED;
+}

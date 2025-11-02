@@ -1,0 +1,337 @@
+.dashboard-section {
+    background: #2E2E33;
+    padding: 5px 20px 20px 20px;
+    border-radius: 0;
+    box-shadow: none;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+}
+
+.dashboard-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.hamburger-menu {
+    position: relative;
+}
+
+.hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    z-index: 1001;
+}
+
+.hamburger-btn span {
+    width: 20px;
+    height: 2px;
+    background-color: #A0A0A8;
+    transition: all 0.3s ease;
+}
+
+.hamburger-btn:hover span {
+    background-color: #00D9FF;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #2E2E33;
+    border: 1px solid #3D3D42;
+    border-radius: 6px;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    min-width: 200px;
+    z-index: 1000;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: #A0A0A8;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.menu-item:hover {
+    background-color: #3D3D42;
+    color: #00D9FF;
+}
+
+.menu-item.active {
+    color: #00D9FF;
+    font-weight: 600;
+}
+
+.menu-item:first-child {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+.menu-item:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.dev-grid-toggle-btn {
+    padding: 6px 12px;
+    background-color: #3D3D42;
+    color: #A0A0A8;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-right: 500px;
+}
+
+.dev-grid-toggle-btn:hover {
+    background-color: #4A4A50;
+    border-color: #00D9FF;
+    color: #00D9FF;
+}
+
+.dashboard-layout {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    flex: 1;
+    min-height: 0;
+}
+
+.dashboard-sidebar {
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dashboard-main {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    height: 100%;
+    background-color: #1A1A1D;
+}
+
+.dev-grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    grid-template-rows: repeat(9, 1fr) 0.5fr;
+    gap: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+
+.dev-grid-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dev-grid-cell {
+    border: 1px dashed rgba(0, 217, 255, 0.3);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 2px;
+    aspect-ratio: 1;
+}
+
+.dev-grid-cell.half-height {
+    aspect-ratio: 2;
+}
+
+.dev-grid-cell span {
+    background: rgba(0, 217, 255, 0.8);
+    color: #1A1A1D;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.game-selector {
+    margin-bottom: 0;
+}
+
+.game-selector label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #A0A0A8;
+}
+
+.game-selector select {
+    padding: 12px;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 100%;
+    background-color: #1A1A1D;
+    color: #E5E5E7;
+}
+
+.filters-section {
+    background-color: #1A1A1D;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #3D3D42;
+    margin-bottom: 0;
+}
+
+.filters-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #A0A0A8;
+}
+
+.filter-group select {
+    padding: 8px;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #1A1A1D;
+    color: #E5E5E7;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #00D9FF;
+}
+
+#shooter-search {
+    margin-bottom: 5px;
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+.toggle-button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.toggle-button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.toggle-button {
+    padding: 8px 16px;
+    background-color: #3D3D42;
+    color: #A0A0A8;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.toggle-button:hover {
+    background-color: #4A4A50;
+    border-color: #00D9FF;
+}
+
+.toggle-button.active {
+    background-color: rgba(0, 217, 255, 0.15);
+    color: #00D9FF;
+    border-color: #00D9FF;
+}
+
+.toggle-button.turnover-filter.active {
+    background-color: rgba(124, 58, 237, 0.15);
+    color: #7C3AED;
+    border-color: #7C3AED;
+}
+
+.visualization-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.viz-toggle-button {
+    padding: 8px 16px;
+    background-color: #3D3D42;
+    color: #A0A0A8;
+    border: 2px solid #3D3D42;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.viz-toggle-button:hover {
+    background-color: #4A4A50;
+    border-color: #00D9FF;
+}
+
+.viz-toggle-button.active {
+    background-color: rgba(0, 217, 255, 0.15);
+    color: #00D9FF;
+    border-color: #00D9FF;
+}
+
+@media (max-width: 768px) {
+    .dashboard-layout {
+        flex-direction: column;
+    }
+
+    .dashboard-sidebar {
+        flex: 1;
+        width: 100%;
+    }
+}

@@ -1,0 +1,50 @@
+.analytics-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    left: var(--field-width, 0);
+    right: auto;
+}
+
+.analytics-container > * {
+    pointer-events: auto;
+}
+
+.histogram-container {
+    position: relative;
+    background-color: #1A1A1D;
+    border: none;
+    border-radius: 0;
+    flex: 0.8;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#shothistogram-for {
+    /* Margin handled by gap in flex container */
+}
+
+#shothistogram-against {
+    /* Margin handled by gap in flex container */
+}
+
+.spider-container {
+    position: relative;
+    background-color: #1A1A1D;
+    border: none;
+    border-radius: 0;
+    flex: 1.4;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
