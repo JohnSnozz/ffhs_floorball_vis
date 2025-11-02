@@ -633,6 +633,45 @@ class FloorballApp {
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
 
+        // Setup hamburger menus for all tabs
+        const hamburgerMenus = [
+            { btn: 'hamburger-btn', menu: 'dropdown-menu' },
+            { btn: 'hamburger-btn-import', menu: 'dropdown-menu-import' },
+            { btn: 'hamburger-btn-corrections', menu: 'dropdown-menu-corrections' }
+        ];
+
+        hamburgerMenus.forEach(({ btn, menu }) => {
+            const hamburgerBtn = document.getElementById(btn);
+            const dropdownMenu = document.getElementById(menu);
+
+            if (hamburgerBtn && dropdownMenu) {
+                hamburgerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Close all other dropdowns
+                    hamburgerMenus.forEach(({ menu: otherMenu }) => {
+                        if (otherMenu !== menu) {
+                            const otherDropdown = document.getElementById(otherMenu);
+                            if (otherDropdown) otherDropdown.classList.remove('show');
+                        }
+                    });
+                    dropdownMenu.classList.toggle('show');
+                });
+            }
+        });
+
+        // Close all dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            hamburgerMenus.forEach(({ btn, menu }) => {
+                const hamburgerBtn = document.getElementById(btn);
+                const dropdownMenu = document.getElementById(menu);
+                if (hamburgerBtn && dropdownMenu &&
+                    !hamburgerBtn.contains(e.target) &&
+                    !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+        });
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetTab = button.getAttribute('data-tab');
@@ -644,6 +683,21 @@ class FloorballApp {
                 // Add active classes
                 button.classList.add('active');
                 document.getElementById(`${targetTab}-tab`).classList.add('active');
+
+                // Close all dropdown menus after selection
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+
+                // Update h2 titles for all headers based on selected tab
+                const titles = {
+                    'import': 'Import Data',
+                    'dashboard': 'Statistics Dashboard',
+                    'corrections': 'Corrections'
+                };
+                document.querySelectorAll('.dashboard-header h2').forEach(h2 => {
+                    h2.textContent = titles[targetTab] || 'Statistics Dashboard';
+                });
 
                 // If switching to dashboard tab, ensure all games are loaded if nothing is selected
                 if (targetTab === 'dashboard') {
@@ -1830,24 +1884,36 @@ class FloorballApp {
             onFieldTotal: onFieldData ? onFieldData.length : 0
         });
 
-        // Calculate grid cell dimensions based on dashboard-main area
+        // Calculate field dimensions based on dashboard-main height
         const dashboardMain = document.querySelector('.dashboard-main');
         const dashboardRect = dashboardMain.getBoundingClientRect();
-        const cellWidth = dashboardRect.width / 15;
-        const cellHeight = dashboardRect.height / 10;
 
-        // Map should span 8 cells vertically (A1 to H1), width calculated for 1:2 aspect ratio
-        // Original field dimensions: 600x1200 (1:2 aspect ratio)
-        // Increase by 1/7 to fill 8 cells properly (was 7, now 8)
-        const fieldHeight = (cellHeight * 8) * (8/7); // 8 rows tall, increased by 1/7
-        const fieldWidth = fieldHeight / 2; // Maintain 1:2 aspect ratio (half the height)
+        // Use padding
+        const padding = 20;
+        const availableHeight = dashboardRect.height - (padding * 2);
 
-        // Total SVG width includes field + legend space
-        const legendWidth = cellWidth * 2; // 2 columns for legend
-        const totalSVGWidth = dashboardRect.width;
-        const totalSVGHeight = dashboardRect.height;
+        // Calculate field size maintaining 1:2 aspect ratio (height is 2x width)
+        // Field dimensions: 600x1200 (width x height)
+        const aspectRatio = 2; // height / width
 
-        const margin = {top: 10, right: 10, bottom: 10, left: 10};
+        // Height is the limiting factor
+        const fieldHeight = availableHeight;
+        const fieldWidth = fieldHeight / aspectRatio;
+
+        // Total SVG size is field + padding
+        const totalSVGWidth = fieldWidth + (padding * 2);
+        const totalSVGHeight = fieldHeight + (padding * 2);
+
+        console.log('SVG Dimensions:', {
+            dashboardWidth: dashboardRect.width,
+            dashboardHeight: dashboardRect.height,
+            fieldWidth,
+            fieldHeight,
+            totalSVGWidth,
+            totalSVGHeight
+        });
+
+        const margin = {top: padding, right: padding, bottom: padding, left: padding};
 
         const svg = container
             .append('svg')
@@ -1855,7 +1921,32 @@ class FloorballApp {
             .attr('height', totalSVGHeight)
             .style('position', 'absolute')
             .style('top', '0')
-            .style('left', '0');
+            .style('left', '0')
+            .style('pointer-events', 'auto')
+            .style('max-width', 'none');
+
+        // Explicitly set field-container width to match SVG width
+        const fieldContainer = document.querySelector('.field-container');
+        if (fieldContainer) {
+            fieldContainer.style.width = `${totalSVGWidth}px`;
+            fieldContainer.style.maxWidth = `${totalSVGWidth}px`;
+            console.log(`Set .field-container width to ${totalSVGWidth}px`);
+        }
+
+        // Also set chart-section width
+        const chartSection = document.querySelector('.chart-section');
+        if (chartSection) {
+            chartSection.style.width = `${totalSVGWidth}px`;
+            chartSection.style.maxWidth = `${totalSVGWidth}px`;
+        }
+
+        // Position analytics-container to start at the right edge of field-container
+        const analyticsContainer = document.querySelector('.analytics-container');
+        if (analyticsContainer) {
+            analyticsContainer.style.left = `${totalSVGWidth}px`; // No gap
+            analyticsContainer.style.right = 'auto';
+            console.log(`Set .analytics-container left position to ${totalSVGWidth}px`);
+        }
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
@@ -2126,8 +2217,8 @@ class FloorballApp {
         // Hide shot legend by default (since dots are hidden by default)
         svg.select('.shot-map-legend').style('display', 'none');
 
-        // Add xG histograms for both teams
-        this.createXGHistograms(svg, filteredData, fieldWidth, fieldHeight, margin);
+        // Add xG histograms and spider diagram to separate container
+        this.createXGHistograms(filteredData, fieldWidth, fieldHeight, margin);
 
         console.log('Shot map created with dots and heatmap');
         await debugLog('Shot map complete', { dotsDrawn: shotsWithCoords.length });
@@ -3826,9 +3917,14 @@ class FloorballApp {
         this.team2FullData = null;
     }
 
-    createXGHistograms(svg, data, fieldWidth, fieldHeight, margin) {
+    createXGHistograms(data, fieldWidth, fieldHeight, margin) {
         console.log('Creating xG histograms');
         console.log('Current game ID:', this.currentGameId);
+
+        // Clear all containers
+        d3.select('#shothistogram-for').selectAll('*').remove();
+        d3.select('#shothistogram-against').selectAll('*').remove();
+        d3.select('#performance-spider').selectAll('*').remove();
 
         // Get unique shooting teams from the actual data
         const uniqueShootingTeams = [...new Set(data.map(d => d.shooting_team))].filter(t => t);
@@ -3906,15 +4002,17 @@ class FloorballApp {
         console.log(`Team 1 (${team1}): ${team1Shots.length} shots`);
         console.log(`Team 2 (${team2}): ${team2Shots.length} shots`);
 
-        // Position for histograms (far right side)
-        const dashboardMain = document.querySelector('.dashboard-main');
-        const dashboardRect = dashboardMain.getBoundingClientRect();
-        const cellWidth = dashboardRect.width / 15;
-        const cellHeight = dashboardRect.height / 10;
+        // Get container dimensions for each histogram
+        const histogramForContainer = d3.select('#shothistogram-for');
+        const histogramAgainstContainer = d3.select('#shothistogram-against');
+        const spiderContainer = d3.select('#performance-spider');
 
-        const histogramX = cellWidth * 4.5; // Position at column 4.5 (moved half cell left from 5)
-        const histogramWidth = cellWidth * 3; // Use 3 columns width
-        const histogramHeight = cellHeight * 2; // Exactly 2 cells tall
+        const histogramForRect = histogramForContainer.node().getBoundingClientRect();
+        const histogramAgainstRect = histogramAgainstContainer.node().getBoundingClientRect();
+        const spiderRect = spiderContainer.node().getBoundingClientRect();
+
+        const histogramWidth = histogramForRect.width - 40;
+        const histogramHeight = histogramForRect.height - 40;
 
         // Calculate y-scale maximum
         // Only use shared Y-max when no player is selected (for team comparison)
@@ -3945,24 +4043,37 @@ class FloorballApp {
             this.team2FullData = null;
         }
 
-        // Create histogram for Team 1 (upper half)
-        const team1HistGroup = svg.append('g')
+        // Create SVG for Team 1 histogram (shots for)
+        const svgFor = histogramForContainer.append('svg')
+            .attr('width', histogramForRect.width)
+            .attr('height', histogramForRect.height);
+
+        const team1HistGroup = svgFor.append('g')
             .attr('class', 'xg-histogram-team1')
-            .attr('transform', `translate(${histogramX}, ${margin.top + 20})`);
+            .attr('transform', `translate(20, 20)`);
 
         this.drawXGHistogram(team1HistGroup, team1Shots, histogramWidth, histogramHeight, team1, 'team1', sharedYMax);
 
-        // Create histogram for Team 2 (lower half) - moved down 1 cell to align x-axis with field bottom
-        const team2HistGroup = svg.append('g')
+        // Create SVG for Team 2 histogram (shots against)
+        const svgAgainst = histogramAgainstContainer.append('svg')
+            .attr('width', histogramAgainstRect.width)
+            .attr('height', histogramAgainstRect.height);
+
+        const team2HistGroup = svgAgainst.append('g')
             .attr('class', 'xg-histogram-team2')
-            .attr('transform', `translate(${histogramX}, ${margin.top + (fieldHeight / 2) + 100 + cellHeight})`);
+            .attr('transform', `translate(20, 20)`);
 
         this.drawXGHistogram(team2HistGroup, team2Shots, histogramWidth, histogramHeight, team2, 'team2', sharedYMax);
 
-        // Create spider diagram between histograms
-        const spiderWidth = histogramWidth;
-        const spiderHeight = histogramHeight * 1.5;
-        const spiderY = margin.top + histogramHeight + 40 + (cellHeight / 2) + 30;
+        // Create SVG for spider diagram
+        const svgSpider = spiderContainer.append('svg')
+            .attr('width', spiderRect.width)
+            .attr('height', spiderRect.height)
+            .style('display', 'block');
+
+        // Use full container dimensions
+        const spiderWidth = spiderRect.width;
+        const spiderHeight = spiderRect.height;
 
         let spiderPlayerData = null;
         let spiderTeamData = null;
@@ -4024,8 +4135,8 @@ class FloorballApp {
             spiderAllData = [...team1ShotsUnfiltered, ...team2ShotsUnfiltered];
         }
 
-        this.createSpiderDiagram(svg, spiderPlayerData, spiderTeamData, spiderAllData, this.currentGameData, spiderWidth, spiderHeight,
-            { x: histogramX, y: spiderY });
+        this.createSpiderDiagram(svgSpider, spiderPlayerData, spiderTeamData, spiderAllData, this.currentGameData, spiderWidth, spiderHeight,
+            { x: spiderWidth / 2, y: spiderHeight / 2 });
 
         // Store references for updating with player overlay
         this.team1HistGroup = team1HistGroup;
@@ -4368,6 +4479,13 @@ class FloorballApp {
     createSpiderDiagram(svg, playerData, teamData, allData, allDataForScale, width, height, position) {
         svg.selectAll('.spider-diagram-group').remove();
 
+        console.log('Spider Diagram Debug:', {
+            width,
+            height,
+            position,
+            svgNode: svg.node()
+        });
+
         const group = svg.append('g')
             .attr('class', 'spider-diagram-group')
             .attr('transform', `translate(${position.x}, ${position.y})`);
@@ -4441,9 +4559,11 @@ class FloorballApp {
             }
         });
 
-        const radius = Math.min(width, height) / 2 - 40;
-        const centerX = width / 2;
-        const centerY = height / 2;
+        // Calculate radius based on the smaller dimension to ensure it fits
+        // Fixed size for consistent appearance
+        const radius = 80; // Fixed radius that should fit in the container
+        const centerX = 0; // Center at origin since we're translating the group
+        const centerY = 0;
         const levels = 5;
         const numAxes = 8;
         const angleSlice = (2 * Math.PI) / numAxes;
@@ -4538,8 +4658,8 @@ class FloorballApp {
 
         group.append('text')
             .attr('x', centerX)
-            .attr('y', -20)
-            .style('font-size', '12px')
+            .attr('y', -radius - 40)
+            .style('font-size', '14px')
             .style('font-weight', 'bold')
             .style('fill', '#E5E5E7')
             .style('text-anchor', 'middle')

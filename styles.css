@@ -15,7 +15,7 @@ body {
     width: 1920px;
     height: 1080px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 0;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -24,7 +24,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 5px;
 }
 
 .logo-placeholder {
@@ -63,8 +63,8 @@ header {
 
 /* Tab Content */
 main {
-    margin-top: 30px;
-    height: calc(1080px - 140px);
+    margin-top: 0;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -76,6 +76,14 @@ main {
 .tab-content.active {
     display: block;
     height: 100%;
+}
+
+/* Content Sections */
+.import-content,
+.corrections-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
 }
 
 /* Import Section */
@@ -239,9 +247,9 @@ main {
 /* Dashboard Section */
 .dashboard-section {
     background: #2E2E33;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    padding: 5px 20px 20px 20px;
+    border-radius: 0;
+    box-shadow: none;
     height: 100%;
     box-sizing: border-box;
     display: flex;
@@ -252,24 +260,106 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 5px;
     flex-shrink: 0;
 }
 
 .dashboard-header h2 {
     margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Hamburger Menu */
+.hamburger-menu {
+    position: relative;
+}
+
+.hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    z-index: 1001;
+}
+
+.hamburger-btn span {
+    width: 20px;
+    height: 2px;
+    background-color: #A0A0A8;
+    transition: all 0.3s ease;
+}
+
+.hamburger-btn:hover span {
+    background-color: #00D9FF;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #2E2E33;
+    border: 1px solid #3D3D42;
+    border-radius: 6px;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    min-width: 200px;
+    z-index: 1000;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: #A0A0A8;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.menu-item:hover {
+    background-color: #3D3D42;
+    color: #00D9FF;
+}
+
+.menu-item.active {
+    color: #00D9FF;
+    font-weight: 600;
+}
+
+.menu-item:first-child {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+.menu-item:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
 }
 
 .dev-grid-toggle-btn {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background-color: #3D3D42;
     color: #A0A0A8;
     border: 2px solid #3D3D42;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.3s ease;
+    margin-right: 500px;
 }
 
 .dev-grid-toggle-btn:hover {
@@ -298,6 +388,7 @@ main {
     min-width: 0;
     position: relative;
     height: 100%;
+    background-color: #1A1A1D;
 }
 
 /* TEMPORARY: Dev grid overlay for layout planning - Remove when dashboard is finalized */
@@ -458,24 +549,91 @@ main {
     gap: 30px;
 }
 
+.field-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    /* Width wird von JavaScript gesetzt */
+}
+
+.field-container > * {
+    pointer-events: auto;
+    height: 100%;
+    /* Width wird von JavaScript gesetzt */
+}
+
+.analytics-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    /* left position wird von JavaScript gesetzt */
+}
+
+.analytics-container > * {
+    pointer-events: auto;
+}
+
+.histogram-container {
+    position: relative;
+    background-color: #1A1A1D;
+    border: none;
+    border-radius: 0;
+    flex: 0.8;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#shothistogram-for {
+    /* Margin handled by gap in flex container */
+}
+
+#shothistogram-against {
+    /* Margin handled by gap in flex container */
+}
+
+.spider-container {
+    position: relative;
+    background-color: #1A1A1D;
+    border: none;
+    border-radius: 0;
+    flex: 1.4;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .chart-section.full-width {
     grid-column: 1 / -1;
 }
 
 .chart-section {
-    background-color: #1A1A1D;
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid #3D3D42;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
     overflow: visible;
-    width: 100%;
     height: 100%;
+    box-sizing: border-box;
+    /* Width wird von JavaScript gesetzt */
 }
 
 .chart {
-    width: 100%;
     height: 100%;
     position: relative;
+    /* Width wird von JavaScript gesetzt */
 }
 
 /* Responsive */
@@ -673,9 +831,7 @@ main {
     fill: #A0A0A8;
 }
 
-.corrections-section {
-    padding: 20px;
-}
+/* Corrections section now uses dashboard-section class for consistency */
 
 .corrections-controls {
     display: flex;
@@ -990,13 +1146,15 @@ main {
 
 .goalkeeper-stats-section {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 20px;
+    right: 20px;
+    bottom: 20px;
     width: calc(100% / 15 * 3.4);
     display: flex;
     flex-direction: column;
     gap: 8px;
     z-index: 10;
+    justify-content: flex-start;
 }
 
 .goalkeeper-selector {
@@ -1037,4 +1195,227 @@ main {
 .goalkeeper-dumbbell svg {
     width: 100%;
     height: 100%;
+}
+
+/* Container Dev Mode */
+body.dev-containers-visible * {
+    outline: none !important;
+}
+
+body.dev-containers-visible .container {
+    outline: 5px solid rgba(0, 217, 255, 1) !important;
+}
+
+body.dev-containers-visible .container::after {
+    content: '.container (1920x1080)';
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 217, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .dashboard-section {
+    outline: 4px solid rgba(255, 165, 0, 1) !important;
+}
+
+body.dev-containers-visible .dashboard-section::after {
+    content: '.dashboard-section';
+    position: fixed;
+    top: 40px;
+    right: 10px;
+    background: rgba(255, 165, 0, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .dashboard-main {
+    outline: 4px solid rgba(0, 255, 0, 1) !important;
+}
+
+body.dev-containers-visible .dashboard-main::after {
+    content: '.dashboard-main';
+    position: fixed;
+    top: 70px;
+    right: 10px;
+    background: rgba(0, 255, 0, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .dashboard-sidebar {
+    outline: 4px solid rgba(255, 255, 0, 1) !important;
+}
+
+body.dev-containers-visible .dashboard-sidebar::after {
+    content: '.dashboard-sidebar';
+    position: fixed;
+    top: 100px;
+    right: 10px;
+    background: rgba(255, 255, 0, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .field-container {
+    outline: 4px solid rgba(50, 255, 50, 1) !important;
+}
+
+body.dev-containers-visible .field-container::before {
+    content: '.field-container (shotmap)';
+    position: fixed;
+    top: 130px;
+    right: 10px;
+    background: rgba(50, 255, 50, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .analytics-container {
+    outline: 4px solid rgba(255, 100, 255, 1) !important;
+}
+
+body.dev-containers-visible .analytics-container::before {
+    content: '.analytics-container (histograms+spider)';
+    position: fixed;
+    top: 160px;
+    right: 10px;
+    background: rgba(255, 100, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .goalkeeper-stats-section {
+    outline: 4px solid rgba(255, 0, 127, 1) !important;
+}
+
+body.dev-containers-visible .goalkeeper-stats-section::before {
+    content: '.goalkeeper-stats-section';
+    position: fixed;
+    top: 190px;
+    right: 10px;
+    background: rgba(255, 0, 127, 1);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .chart-section {
+    outline: 3px dashed rgba(0, 200, 200, 1) !important;
+}
+
+body.dev-containers-visible .filters-section {
+    outline: 3px dashed rgba(150, 100, 200, 1) !important;
+}
+
+body.dev-containers-visible #shothistogram-for {
+    outline: 3px solid rgba(100, 255, 100, 1) !important;
+}
+
+body.dev-containers-visible #shothistogram-for::before {
+    content: '#shothistogram-for';
+    position: fixed;
+    top: 220px;
+    right: 10px;
+    background: rgba(100, 255, 100, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible #shothistogram-against {
+    outline: 3px solid rgba(255, 100, 100, 1) !important;
+}
+
+body.dev-containers-visible #shothistogram-against::before {
+    content: '#shothistogram-against';
+    position: fixed;
+    top: 250px;
+    right: 10px;
+    background: rgba(255, 100, 100, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible #performance-spider {
+    outline: 3px solid rgba(100, 150, 255, 1) !important;
+}
+
+body.dev-containers-visible #performance-spider::before {
+    content: '#performance-spider';
+    position: fixed;
+    top: 280px;
+    right: 10px;
+    background: rgba(100, 150, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
 }
