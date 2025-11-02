@@ -1948,6 +1948,38 @@ class FloorballApp {
             console.log(`Set .analytics-container left position to ${totalSVGWidth}px`);
         }
 
+        // Position middle-stats centered between analytics-container and goalkeeper-stats-section
+        const middleStats = document.querySelector('.middle-stats');
+        if (middleStats && analyticsContainer) {
+            const analyticsLeft = totalSVGWidth;
+            const analyticsWidth = 300;
+            const middleStatsWidth = 300;
+            const goalkeeperWidth = 300;
+
+            // Calculate available space between analytics and goalkeeper
+            const analyticsRight = analyticsLeft + analyticsWidth;
+            const goalkeeperLeft = dashboardRect.width - goalkeeperWidth - 20; // 20px from right edge
+            const availableSpace = goalkeeperLeft - analyticsRight;
+
+            // Center middle-stats in the available space
+            const gap = (availableSpace - middleStatsWidth) / 2;
+            const middleStatsLeft = analyticsRight + gap;
+
+            middleStats.style.left = `${middleStatsLeft}px`;
+            middleStats.style.right = 'auto';
+            console.log(`Set .middle-stats left position to ${middleStatsLeft}px with ${gap}px gaps on each side`);
+        }
+
+        // Position goalkeeper-stats-section at the right edge of dashboard-main with 20px gap
+        const goalkeeperSection = document.querySelector('.goalkeeper-stats-section');
+        if (goalkeeperSection) {
+            // Calculate position from right edge
+            const goalkeeperWidth = 300; // Width of goalkeeper-stats-section
+            goalkeeperSection.style.left = 'auto';
+            goalkeeperSection.style.right = '20px';
+            console.log(`Set .goalkeeper-stats-section to right: 20px`);
+        }
+
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
 

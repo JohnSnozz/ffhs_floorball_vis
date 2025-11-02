@@ -9,12 +9,17 @@ body {
     background-color: #1A1A1D;
     color: #E5E5E7;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    min-width: 100vw;
 }
 
 .container {
     width: 1920px;
     height: 1080px;
-    margin: 0 auto;
+    margin: 0;
     padding: 0;
     box-sizing: border-box;
     overflow: hidden;
@@ -584,6 +589,26 @@ main {
     pointer-events: auto;
 }
 
+.middle-stats {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    background-color: #1A1A1D;
+    /* left position will be set by JavaScript */
+}
+
+.middle-stats > * {
+    pointer-events: auto;
+}
+
 .histogram-container {
     position: relative;
     background-color: #1A1A1D;
@@ -1146,15 +1171,18 @@ main {
 
 .goalkeeper-stats-section {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    bottom: 20px;
-    width: calc(100% / 15 * 3.4);
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 300px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding: 20px 0;
+    box-sizing: border-box;
     z-index: 10;
     justify-content: flex-start;
+    /* Position will be set by JavaScript */
 }
 
 .goalkeeper-selector {
@@ -1409,6 +1437,27 @@ body.dev-containers-visible #performance-spider::before {
     top: 280px;
     right: 10px;
     background: rgba(100, 150, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .middle-stats {
+    outline: 4px solid rgba(200, 150, 100, 1) !important;
+}
+
+body.dev-containers-visible .middle-stats::before {
+    content: '.middle-stats';
+    position: fixed;
+    top: 310px;
+    right: 10px;
+    background: rgba(200, 150, 100, 1);
     color: #000;
     padding: 6px 12px;
     border-radius: 4px;
