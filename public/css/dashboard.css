@@ -132,7 +132,30 @@
     flex: 0 0 320px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 14px;
+    background-color: #1A1A1D;
+    padding: 16px 14px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: hidden;
+    overflow-x: hidden;
+    height: 100%;
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+    width: 3px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .dashboard-main {
@@ -188,105 +211,253 @@
 
 .game-selector {
     margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .game-selector label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #A0A0A8;
+    margin-bottom: 6px;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .game-selector select {
-    padding: 12px;
-    border: 2px solid #3D3D42;
-    border-radius: 6px;
-    font-size: 1rem;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    font-size: 0.95rem;
+    font-weight: 300;
     width: 100%;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.game-selector select option {
     background-color: #1A1A1D;
-    color: #E5E5E7;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+}
+
+.game-selector select:hover {
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.game-selector select:focus {
+    outline: none;
+    border-bottom-color: rgba(255, 255, 255, 0.5);
 }
 
 .filters-section {
-    background-color: #1A1A1D;
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid #3D3D42;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
     margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .filters-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
+}
+
+.filter-group:first-child {
+    flex: 1;
+    min-height: 0;
 }
 
 .filter-group label {
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #A0A0A8;
+    margin-bottom: 6px;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
 }
 
 .filter-group select {
-    padding: 8px;
-    border: 2px solid #3D3D42;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    background-color: #1A1A1D;
-    color: #E5E5E7;
+    padding: 6px 10px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    font-size: 0.9rem;
+    font-weight: 300;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.filter-group select:hover {
+    border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
 .filter-group select:focus {
     outline: none;
-    border-color: #00D9FF;
+    border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+.filter-group select option {
+    background-color: #1A1A1D;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 8px;
+}
+
+.filter-group select option:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#filter-shooter {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    font-size: 1.1rem !important;
+    overflow-y: auto;
+    background-color: #1A1A1D;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
+    padding: 8px;
+    line-height: 1.6;
+}
+
+#filter-shooter option {
+    background-color: #1A1A1D;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 12px 8px;
+    font-size: 1.1rem !important;
+    line-height: 1.6;
+}
+
+#filter-shooter option:checked {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    font-weight: 500;
+}
+
+#filter-shooter option:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#filter-shooter::-webkit-scrollbar {
+    width: 3px;
+}
+
+#filter-shooter::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#filter-shooter::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+#filter-shooter::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 #shooter-search {
     margin-bottom: 5px;
     width: 100%;
-    padding: 5px;
+    padding: 8px 10px;
     box-sizing: border-box;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    font-weight: 300;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#shooter-search::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#shooter-search:hover {
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+#shooter-search:focus {
+    outline: none;
+    border-bottom-color: rgba(255, 255, 255, 0.5);
 }
 
 .toggle-button-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 .toggle-button-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
 }
 
 .toggle-button {
-    padding: 8px 16px;
-    background-color: #3D3D42;
-    color: #A0A0A8;
-    border: 2px solid #3D3D42;
-    border-radius: 6px;
+    padding: 8px 12px;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
     cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 400;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.toggle-button::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 0;
+    width: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: height 0.3s ease;
 }
 
 .toggle-button:hover {
-    background-color: #4A4A50;
-    border-color: #00D9FF;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.toggle-button:hover::before {
+    height: 100%;
 }
 
 .toggle-button.active {
-    background-color: rgba(0, 217, 255, 0.15);
-    color: #00D9FF;
-    border-color: #00D9FF;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.toggle-button.active::before {
+    height: 100%;
 }
 
 .toggle-button.turnover-filter.active {
@@ -295,40 +466,70 @@
     border-color: #22c55e;
 }
 
+.toggle-button.turnover-filter.active::before {
+    background-color: #22c55e;
+}
+
 .toggle-button.turnover-filter.exclude {
     background-color: rgba(239, 68, 68, 0.15);
     color: #ef4444;
     border-color: #ef4444;
 }
 
+.toggle-button.turnover-filter.exclude::before {
+    background-color: #ef4444;
+}
+
 .visualization-controls {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .viz-toggle-button {
-    padding: 8px 16px;
-    background-color: #3D3D42;
-    color: #A0A0A8;
-    border: 2px solid #3D3D42;
-    border-radius: 6px;
+    padding: 8px 12px;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
     cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 400;
     transition: all 0.3s ease;
     width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.viz-toggle-button::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 0;
+    width: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: height 0.3s ease;
 }
 
 .viz-toggle-button:hover {
-    background-color: #4A4A50;
-    border-color: #00D9FF;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.viz-toggle-button:hover::before {
+    height: 100%;
 }
 
 .viz-toggle-button.active {
-    background-color: rgba(0, 217, 255, 0.15);
-    color: #00D9FF;
-    border-color: #00D9FF;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.viz-toggle-button.active::before {
+    height: 100%;
 }
 
 @media (max-width: 768px) {

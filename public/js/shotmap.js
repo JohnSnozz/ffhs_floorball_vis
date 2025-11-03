@@ -84,23 +84,23 @@ class ShotMap {
             .style('max-width', 'none');
 
         const fieldContainer = document.querySelector('.field-container');
+        const chartSection = document.querySelector('.chart-section');
+        const analyticsContainer = document.querySelector('.analytics-container');
+        const middleStats = document.querySelector('.middle-stats');
+        const goalkeeperSection = document.querySelector('.goalkeeper-stats-section');
+
         if (fieldContainer) {
             fieldContainer.style.width = `${totalSVGWidth}px`;
             fieldContainer.style.maxWidth = `${totalSVGWidth}px`;
             console.log(`Set .field-container width to ${totalSVGWidth}px`);
         }
 
-        const chartSection = document.querySelector('.chart-section');
         if (chartSection) {
             chartSection.style.width = `${totalSVGWidth}px`;
             chartSection.style.maxWidth = `${totalSVGWidth}px`;
         }
 
-        const analyticsContainer = document.querySelector('.analytics-container');
-        const middleStats = document.querySelector('.middle-stats');
-        const goalkeeperSection = document.querySelector('.goalkeeper-stats-section');
-
-        if (analyticsContainer && middleStats && goalkeeperSection) {
+        if (fieldContainer && analyticsContainer && middleStats && goalkeeperSection) {
             const analyticsWidth = 300;
             const middleStatsWidth = 300;
             const goalkeeperWidth = 300;
