@@ -223,6 +223,8 @@ class DashboardSidebar {
         } else {
             this.app.createCharts(filteredData);
         }
+
+        this.app.goalkeeperStats.updateGoalkeeperHistogram();
     }
 }
 

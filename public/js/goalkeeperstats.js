@@ -26,6 +26,16 @@ class GoalkeeperStats {
         }
 
         goalkeeperHistogram.setData(this.app.currentGameData, allGamesData);
+
+        if (typeof goalkeeperRadialChart !== 'undefined') {
+            const gkSelect = document.getElementById('goalkeeper-select');
+            const selectedGK = gkSelect ? gkSelect.value : null;
+
+            const selectedTypes = Array.from(document.querySelectorAll('.type-filter.active:not(.turnover-filter)'))
+                .map(btn => btn.getAttribute('data-value'));
+
+            goalkeeperRadialChart.setData(this.app.currentGameData, allGamesData, selectedGK, selectedTypes);
+        }
     }
 }
 

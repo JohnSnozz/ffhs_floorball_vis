@@ -240,3 +240,66 @@ body.dev-containers-visible .middle-stats::before {
     z-index: 10010;
     border: 2px solid #000;
 }
+
+body.dev-containers-visible .goalkeeper-histogram {
+    outline: 3px solid rgba(150, 200, 255, 1) !important;
+}
+
+body.dev-containers-visible .goalkeeper-histogram::before {
+    content: '.goalkeeper-histogram';
+    position: fixed;
+    top: 340px;
+    right: 10px;
+    background: rgba(150, 200, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .goalkeeper-dumbbell {
+    outline: 3px solid rgba(255, 200, 100, 1) !important;
+}
+
+body.dev-containers-visible .goalkeeper-dumbbell::before {
+    content: '.goalkeeper-dumbbell';
+    position: fixed;
+    top: 370px;
+    right: 10px;
+    background: rgba(255, 200, 100, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .goalkeeper-radial {
+    outline: 3px solid rgba(100, 255, 200, 1) !important;
+}
+
+body.dev-containers-visible .goalkeeper-radial::before {
+    content: '.goalkeeper-radial';
+    position: fixed;
+    top: 400px;
+    right: 10px;
+    background: rgba(100, 255, 200, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
