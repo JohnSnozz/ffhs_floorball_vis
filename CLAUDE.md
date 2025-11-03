@@ -2,147 +2,244 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## CRITICAL INSTRUCTIONS - READ FIRST
 
-This is a floorball shot data visualization and analysis dashboard. It's a web application that imports CSV shot data into a SQLite database and visualizes it using D3.js with hexagonal binning on a floorball court. Features include CSV import, duplicate detection, game management, shot map visualization with success rate heatmaps, and database persistence. The application runs in the browser using sql.js for SQLite operations, with a Bun backend for file serving and API endpoints.
+### Project Architecture: Modular Design
 
-## Development Commands
+**⚠️ MOST IMPORTANT RULE:**
 
+When adding new features, visualizations, or dashboard components:
+- **ALWAYS create a new module file** in `public/js/`
+- **NEVER add large features directly to `app.js`**
+- Keep `app.js` as a lean orchestrator (currently 797 lines)
+
+**app.js should only contain:**
+- Module initialization
+- Shared state management
+- Tab navigation
+- High-level orchestration
+- Small utility functions
+
+See `docs/DEVELOPMENT.md` for detailed guidelines on adding features.
+
+---
+
+## Quick Reference
+
+### Development Server
 ```bash
-# Start development server (runs on http://localhost:3000)
-bun run dev
-# or
-bun run start
-# or
-bun run serve
+bun run dev    # Starts on http://localhost:3000
 ```
 
-All commands use the same Bun-based development server (`server.js`).
+**IMPORTANT:**
+- DO NOT automatically start the server
+- User prefers to start manually
+- Only provide commands if asked
 
-**IMPORTANT - Server Management:**
-- DO NOT automatically start the Bun server
-- The user prefers to start the server manually
-- Only provide the commands if asked, but do not execute them
-- If testing is needed, ask the user to start the server first
+### Project Structure
+```
+public/
+├── css/                # 7 CSS files
+├── js/                 # 10 JavaScript modules
+└── images/             # field.png, field_inverted.png
 
-## Architecture Overview
+app.js                  # Main orchestrator (797 lines)
+server.js               # Bun backend
+index.html              # Main HTML
+docs/                   # Full documentation
+  ├── ARCHITECTURE.md   # Complete architecture overview
+  ├── DEVELOPMENT.md    # Development guidelines
+  └── DATABASE.md       # Database schema
+```
 
-### Application Structure
+### Current Modules (10)
 
-The application follows a single-file, class-based architecture:
+1. **database.js** - DatabaseManager class (all DB operations)
+2. **dashboard-sidebar.js** - DashboardSidebar class (filters, controls)
+3. **shothistogram.js** - ShotHistogram class (xG histograms)
+4. **performancespider.js** - PerformanceSpider class (radar chart)
+5. **goalkeeperstats.js** - GoalkeeperStats class (wrapper)
+6. **gkhistogram.js** - GoalkeeperHistogram class (GK viz)
+7. **shotmap.js** - ShotMap class (hexbin visualization)
+8. **corrections.js** - Corrections class (data corrections)
+9. **csvimport.js** - CSVImport class (CSV import)
+10. **dev-grid.js** - Dev grid overlay
 
-- **FloorballApp** (app.js): Main application class containing all functionality including:
-  - Database initialization and management (SQL.js)
-  - CSV parsing and validation
-  - Data import with duplicate detection
-  - D3.js visualization with hexagonal binning
-  - Tab navigation between Import and Dashboard views
-  - Event handling and UI updates
-  - Server communication for database persistence and logging
-- **server.js**: Bun-based HTTP server with API endpoints and static file serving
+---
 
-### Key Architectural Patterns
+## Module Pattern (MANDATORY for new features)
 
-1. **Monolithic Structure**: All application logic in single `app.js` file (1200+ lines)
-2. **Client-side Database**: Uses sql.js to run SQLite entirely in browser
-3. **Persistence Strategy**: Database file is saved to server via `/api/save-database` endpoint to `./floorball_data.sqlite`
-4. **Visualization**: D3.js v7 with d3-hexbin for shot map with success rate heatmaps
-5. **Coordinate System**: Converts polar coordinates (distance, angle) from CSV to cartesian (x, y) for visualization
+```javascript
+// public/js/myfeature.js
+class MyFeature {
+    constructor(app) {
+        this.app = app;           // Access to main app
+        this.myState = null;      // Module-specific state
+        this.setupEventListeners();
+    }
 
-### Database Schema
+    setupEventListeners() {
+        // Bind DOM elements
+    }
 
-Two main tables with foreign key relationship:
-- **games**: Stores game metadata (id, name, date, created_at)
-- **shots**: Stores shot data with 31 fields including player positions, shot metrics, and game state
-- Relationship: One game has many shots (shots.game_id → games.id)
+    // Feature methods...
+}
 
-See `docs/database_uml.md` for complete schema details.
+window.MyFeature = MyFeature;
+```
 
-### Development Server (server.js)
+**Integration:**
+1. Add script to `index.html`: `<script src="public/js/myfeature.js" defer></script>`
+2. Initialize in `app.js`: `this.myFeature = new MyFeature(this);`
 
-The Bun server provides:
-- Static file serving from project root directory
-- **POST /api/save-database**: Saves uploaded SQLite database to `./floorball_data.sqlite`
-- **POST /api/debug-log**: Receives client debug logs and writes to `logs/YYYY-MM-DD-debug.log`
-- CORS headers enabled for all endpoints
-- Environment variable support via `.env` file
+---
 
-### Application Workflow
+## Complete Documentation
 
-**Import Tab:**
-1. User uploads CSV file via file selector
-2. CSV is parsed and validated for required columns
-3. Preview shows first 10 rows
-4. User enters game name and date
-5. System checks for existing game with same name/date
-6. Import creates/uses game and inserts shots
-7. Database is saved to server via `/api/save-database`
+**For detailed information, see:**
 
-**Dashboard Tab:**
-1. User selects a game from dropdown
-2. Shot data is loaded from database
-3. Shot map is rendered with D3.js:
-   - Hexagonal binning groups nearby shots
-   - Color represents success rate (goals/shots)
-   - Size represents number of shots
-   - Background shows floorball court image
-4. Tooltip shows detailed stats on hover
+- **`docs/ARCHITECTURE.md`** - Complete system architecture, data flow, all modules
+- **`docs/DEVELOPMENT.md`** - Step-by-step development guide, examples, patterns
+- **`docs/DATABASE.md`** - Database schema, tables, relationships
+
+---
+
+## Key Technologies
+
+- **Frontend:** Vanilla JavaScript (ES6 classes)
+- **Visualization:** D3.js v7, d3-hexbin
+- **Database:** SQL.js (SQLite in browser)
+- **Backend:** Bun server
+- **Styling:** Modular CSS (7 files in `public/css/`)
+
+---
+
+## Database Operations
+
+**Always use DatabaseManager:**
+
+```javascript
+// In any module
+const data = await this.app.dbManager.loadGameData(gameId);
+await this.app.dbManager.saveCorrection(shotId, field, value);
+```
+
+**Key Tables:**
+- `games` - Game metadata
+- `shots` - Shot data (31 fields)
+- `shot_corrections` - Corrections
+- `game_aliases` - Display names
+- `shots_view` - View combining shots + corrections
+
+---
+
+## Server Endpoints
+
+**Backend API:**
+- `POST /api/save-database` - Save SQLite database to `./floorball_data.sqlite`
+- `POST /api/debug-log` - Write logs to `dev/logs/YYYY-MM-DD-debug.log`
+
+---
+
+## Development Workflow
+
+### Adding a New Visualization
+
+1. Create `public/js/myviz.js` with class pattern
+2. Add HTML container in `index.html`
+3. Add styles in `public/css/visualizations.css`
+4. Add script tag to `index.html`
+5. Initialize in `app.js` → `initializeApp()`
+6. Call from `app.js` → `createCharts()`
+
+**See `docs/DEVELOPMENT.md` for complete examples.**
+
+---
 
 ## Code Style Requirements
 
-**CRITICAL - NO LLM SIGNATURES:**
+**NO LLM SIGNATURES:**
 - NO EMOJIS in code, comments, or documentation
 - Minimal comments - code should be self-explanatory
 - Avoid verbose or overly enthusiastic language
-- No excessive explanatory comments
 - Keep functions small and focused
 
 **Naming Conventions:**
 - JavaScript: camelCase for variables/functions, PascalCase for classes
 - CSS: kebab-case for files and class names
 
-### Script Loading Order (in index.html)
-
-1. D3.js v7
-2. d3-hexbin plugin
-3. SQL.js (CDN)
-4. app.js (main application)
-
-All script tags are in `<head>` with defer behavior.
-
-## Working with the Codebase
-
-### Adding New Features
-
-When adding functionality:
-- All code is currently in `app.js` as a monolithic FloorballApp class
-- Add new methods to the FloorballApp class
-- Consider refactoring if file becomes too large (currently 1200+ lines)
-- CSS is in single `styles.css` file
-
-### Database Operations
-
-The FloorballApp class manages database directly:
-- `this.db.exec()` for queries
-- `this.db.run()` for inserts/updates
-- Call `saveDatabaseToFile()` after modifications
-- Database schema has `games` and `shots` tables with foreign key relationship
-
-### Logging
-
-Debug logging via `debugLog()` function:
-- Sends logs to `/api/debug-log` endpoint
-- Server writes to `logs/YYYY-MM-DD-debug.log`
-- Also logs to browser console
+---
 
 ## Important Notes
 
-- This is a static web application with no build step
-- Static files are served from project root directory
-- The application loads existing database file on startup: `./floorball_data.sqlite`
-- Shot map uses polar to cartesian coordinate conversion (distance + angle → x, y)
-- Floorball court dimensions: 40m × 20m, scaled 15x for visualization
-- Background image: `public/images/field.png`
-- Hexagonal binning fallback: scatter plot if d3-hexbin unavailable
-- Database schema: `games` table (game_id, game_name, game_date, team1, team2) and `shots` table (31 fields)
-- Game matching is case-insensitive with trimmed whitespace
+- Static web app, no build step
+- Database persists to `./floorball_data.sqlite`
+- Field image: `public/images/field.png` (600x1200px)
+- Court dimensions: 40m × 20m, scaled 30x for visualization
+- Coordinate conversion: polar (distance, angle) → cartesian (x, y)
+- All logs: `dev/logs/` (gitignored)
+- Script loading: D3.js → d3-hexbin → SQL.js → modules → app.js
+
+---
+
+## Debugging
+
+```javascript
+// Browser console
+window.floorballApp                    // Access main app
+window.floorballApp.currentGameData    // Current data
+window.floorballApp.shotMap            // Access any module
+
+// Debug logs
+debugLog('Message', { data: value });  // Writes to dev/logs/
+```
+
+---
+
+## Common Mistakes to Avoid
+
+❌ **DON'T:**
+- Add large features to `app.js`
+- Access database directly: `this.app.dbManager.db.exec(...)`
+- Modify shared state: `this.app.currentGameData = ...`
+- Mix module concerns
+
+✅ **DO:**
+- Create new module files for features
+- Use DatabaseManager methods
+- Call app methods for state changes
+- Keep modules independent
+
+---
+
+## Quick Examples
+
+### Access Shared Data
+```javascript
+const data = this.app.currentGameData;
+const gameId = this.app.currentGameId;
+const shooter = this.app.selectedShooter;
+```
+
+### Call Other Modules
+```javascript
+this.app.shotMap.toggleHeatmap(true);
+this.app.dashboardSidebar.applyFilters();
+```
+
+### Database Operations
+```javascript
+await this.app.dbManager.loadGameData(gameId);
+await this.app.dbManager.saveCorrection(shotId, field, value);
+```
+
+---
+
+## For More Information
+
+**Full details in documentation:**
+- Architecture overview: `docs/ARCHITECTURE.md`
+- Development guide: `docs/DEVELOPMENT.md`
+- Database schema: `docs/DATABASE.md`
+
+**When in doubt:** Follow existing module patterns in `public/js/`
