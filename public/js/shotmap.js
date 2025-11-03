@@ -50,16 +50,17 @@ class ShotMap {
         const dashboardMain = document.querySelector('.dashboard-main');
         const dashboardRect = dashboardMain.getBoundingClientRect();
 
-        const padding = 20;
-        const availableHeight = dashboardRect.height - (padding * 2);
+        const verticalPadding = 20;
+        const horizontalPadding = 0;
+        const availableHeight = dashboardRect.height - (verticalPadding * 2);
 
         const aspectRatio = 2;
 
         const fieldHeight = availableHeight;
         const fieldWidth = fieldHeight / aspectRatio;
 
-        const totalSVGWidth = fieldWidth + (padding * 2);
-        const totalSVGHeight = fieldHeight + (padding * 2);
+        const totalSVGWidth = fieldWidth + (horizontalPadding * 2);
+        const totalSVGHeight = fieldHeight + (verticalPadding * 2);
 
         console.log('SVG Dimensions:', {
             dashboardWidth: dashboardRect.width,
@@ -70,7 +71,7 @@ class ShotMap {
             totalSVGHeight
         });
 
-        const margin = {top: padding, right: padding, bottom: padding, left: padding};
+        const margin = {top: verticalPadding, right: horizontalPadding, bottom: verticalPadding, left: horizontalPadding};
 
         const svg = container
             .append('svg')
@@ -96,37 +97,41 @@ class ShotMap {
         }
 
         const analyticsContainer = document.querySelector('.analytics-container');
-        if (analyticsContainer) {
-            analyticsContainer.style.left = `${totalSVGWidth}px`;
-            analyticsContainer.style.right = 'auto';
-            console.log(`Set .analytics-container left position to ${totalSVGWidth}px`);
-        }
-
         const middleStats = document.querySelector('.middle-stats');
-        if (middleStats && analyticsContainer) {
-            const analyticsLeft = totalSVGWidth;
+        const goalkeeperSection = document.querySelector('.goalkeeper-stats-section');
+
+        if (analyticsContainer && middleStats && goalkeeperSection) {
             const analyticsWidth = 300;
             const middleStatsWidth = 300;
             const goalkeeperWidth = 300;
 
-            const analyticsRight = analyticsLeft + analyticsWidth;
-            const goalkeeperLeft = dashboardRect.width - goalkeeperWidth - 20;
-            const availableSpace = goalkeeperLeft - analyticsRight;
+            const totalContainerWidth = totalSVGWidth + analyticsWidth + middleStatsWidth + goalkeeperWidth;
+            const availableSpace = dashboardRect.width - totalContainerWidth;
+            const gap = availableSpace / 5;
 
-            const gap = (availableSpace - middleStatsWidth) / 2;
-            const middleStatsLeft = analyticsRight + gap;
+            const fieldLeft = gap;
+            const analyticsLeft = fieldLeft + totalSVGWidth + gap;
+            const middleStatsLeft = analyticsLeft + analyticsWidth + gap;
+            const goalkeeperLeft = middleStatsLeft + middleStatsWidth + gap;
+
+            fieldContainer.style.left = `${fieldLeft}px`;
+
+            analyticsContainer.style.left = `${analyticsLeft}px`;
+            analyticsContainer.style.right = 'auto';
 
             middleStats.style.left = `${middleStatsLeft}px`;
             middleStats.style.right = 'auto';
-            console.log(`Set .middle-stats left position to ${middleStatsLeft}px with ${gap}px gaps on each side`);
-        }
 
-        const goalkeeperSection = document.querySelector('.goalkeeper-stats-section');
-        if (goalkeeperSection) {
-            const goalkeeperWidth = 300;
-            goalkeeperSection.style.left = 'auto';
-            goalkeeperSection.style.right = '20px';
-            console.log(`Set .goalkeeper-stats-section to right: 20px`);
+            goalkeeperSection.style.left = `${goalkeeperLeft}px`;
+            goalkeeperSection.style.right = 'auto';
+
+            console.log('Container positions with equal gaps:', {
+                gap: gap,
+                fieldLeft: fieldLeft,
+                analyticsLeft: analyticsLeft,
+                middleStatsLeft: middleStatsLeft,
+                goalkeeperLeft: goalkeeperLeft
+            });
         }
 
         const g = svg.append('g')

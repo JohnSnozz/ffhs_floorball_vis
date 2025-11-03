@@ -1,6 +1,7 @@
 class DashboardSidebar {
     constructor(app) {
         this.app = app;
+        this.turnoverState = 'off';  // 'off', 'only', 'exclude'
         this.setupEventListeners();
     }
 
@@ -20,13 +21,22 @@ class DashboardSidebar {
     }
 
     setupFilterToggleButtons() {
-        const allButtons = document.querySelectorAll('.toggle-button-grid .toggle-button');
-        allButtons.forEach(button => {
+        const turnoverButton = document.querySelector('.turnover-filter');
+        const regularButtons = document.querySelectorAll('.toggle-button-grid .toggle-button:not(.turnover-filter)');
+
+        regularButtons.forEach(button => {
             button.addEventListener('click', () => {
                 button.classList.toggle('active');
                 this.applyFilters();
             });
         });
+
+        if (turnoverButton) {
+            turnoverButton.addEventListener('click', () => {
+                this.cycleTurnoverState(turnoverButton);
+                this.applyFilters();
+            });
+        }
 
         const shooterSelect = document.getElementById('filter-shooter');
         if (shooterSelect) {
@@ -80,6 +90,22 @@ class DashboardSidebar {
         }
     }
 
+    cycleTurnoverState(button) {
+        if (this.turnoverState === 'off') {
+            this.turnoverState = 'only';
+            button.classList.add('active');
+            button.classList.remove('exclude');
+        } else if (this.turnoverState === 'only') {
+            this.turnoverState = 'exclude';
+            button.classList.remove('active');
+            button.classList.add('exclude');
+        } else {
+            this.turnoverState = 'off';
+            button.classList.remove('active');
+            button.classList.remove('exclude');
+        }
+    }
+
     populateFilters(data) {
         const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))];
 
@@ -130,40 +156,58 @@ class DashboardSidebar {
             teamFilteredData = teamFilteredData.filter(shot => selectedResults.includes(shot.result));
         }
 
-        if (selectedTypes.length > 0) {
-            const isTurnoverActive = selectedTypes.includes('Turnover');
-            const isDirectActive = selectedTypes.includes('Direct');
-            const isOneTimerActive = selectedTypes.includes('One-timer');
-            const isReboundActive = selectedTypes.includes('Rebound');
+        const isDirectActive = selectedTypes.includes('Direct');
+        const isOneTimerActive = selectedTypes.includes('One-timer');
+        const isReboundActive = selectedTypes.includes('Rebound');
 
-            if (isTurnoverActive && !isDirectActive && !isOneTimerActive && !isReboundActive) {
-                teamFilteredData = teamFilteredData.filter(shot =>
-                    shot.type && shot.type.includes('Turnover')
-                );
-            } else {
-                const allowedTypes = [];
-                if (isDirectActive) {
-                    allowedTypes.push('Direct');
-                    if (isTurnoverActive) {
-                        allowedTypes.push('Turnover | Direct');
-                    }
+        if (selectedTypes.length > 0 || this.turnoverState !== 'off') {
+            teamFilteredData = teamFilteredData.filter(shot => {
+                if (!shot.type) return false;
+
+                const isTurnoverShot = shot.type.includes('Turnover');
+                const isReboundShot = shot.type === 'Rebound';
+                const isDirectShot = shot.type === 'Direct' || shot.type === 'Turnover | Direct';
+                const isOneTimerShot = shot.type === 'One-timer' || shot.type === 'Turnover | One-timer';
+
+                let matchesTypeFilter = false;
+                if (isReboundActive && isReboundShot) {
+                    matchesTypeFilter = true;
                 }
-                if (isOneTimerActive) {
-                    allowedTypes.push('One-timer');
-                    if (isTurnoverActive) {
-                        allowedTypes.push('Turnover | One-timer');
-                    }
+                if (isDirectActive && isDirectShot) {
+                    matchesTypeFilter = true;
                 }
-                if (isReboundActive) {
-                    allowedTypes.push('Rebound');
+                if (isOneTimerActive && isOneTimerShot) {
+                    matchesTypeFilter = true;
                 }
 
-                if (allowedTypes.length > 0) {
-                    teamFilteredData = teamFilteredData.filter(shot =>
-                        allowedTypes.some(allowedType => shot.type === allowedType)
-                    );
+                if (this.turnoverState === 'only') {
+                    if (selectedTypes.length === 0) {
+                        return isTurnoverShot;
+                    } else {
+                        return isTurnoverShot || matchesTypeFilter;
+                    }
+                } else if (this.turnoverState === 'exclude') {
+                    if (isTurnoverShot) {
+                        return false;
+                    }
+
+                    if (selectedTypes.length === 0) {
+                        return !isReboundShot;
+                    }
+
+                    if (isReboundActive && !isDirectActive && !isOneTimerActive) {
+                        return true;
+                    }
+
+                    return matchesTypeFilter;
+                } else {
+                    if (selectedTypes.length === 0) {
+                        return true;
+                    } else {
+                        return matchesTypeFilter;
+                    }
                 }
-            }
+            });
         }
 
         let filteredData = teamFilteredData;
