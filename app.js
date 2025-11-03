@@ -1,4 +1,3 @@
-// Debug logging function
 async function debugLog(message, data = null) {
     try {
         await fetch('/api/debug-log', {
@@ -20,7 +19,7 @@ class FloorballApp {
     constructor() {
         console.log('FloorballApp constructor called');
         debugLog('FloorballApp constructor called');
-        this.db = null;
+        this.dbManager = new DatabaseManager();
         this.currentData = null;
         this.currentGameData = null; // Store current game shots for filtering
         this.initializeApp().catch(error => {
@@ -33,330 +32,31 @@ class FloorballApp {
         try {
             console.log('Starting app initialization...');
             await debugLog('Starting app initialization');
-            
-            await this.initializeDatabase();
+
+            await this.dbManager.initialize();
             console.log('Database initialized');
             await debugLog('Database initialized');
-            
+
             this.setupEventListeners();
             console.log('Event listeners set up');
             await debugLog('Event listeners set up');
-            
+
             this.setupTabs();
             console.log('Tabs set up');
             await debugLog('Tabs set up');
-            
+
             await this.loadGamesList();
             await this.loadCorrectionsGamesList();
             console.log('Floorball app initialized successfully');
             await debugLog('Floorball app initialized successfully');
-            
+
             // Check initial database state
-            this.checkDatabaseState();
+            const state = this.dbManager.checkDatabaseState();
+            console.log('Database state:', state);
         } catch (error) {
             console.error('Failed to initialize app:', error);
             await debugLog('Failed to initialize app', { error: error.message });
             this.showStatus('Failed to initialize application', 'error');
-        }
-    }
-
-    async initializeDatabase() {
-        console.log('Loading SQL.js...');
-        await debugLog('Loading SQL.js...');
-        
-        // SQL.js should be loaded from CDN in HTML
-        if (typeof window.initSqlJs === 'undefined') {
-            console.error('SQL.js not loaded from CDN');
-            await debugLog('SQL.js not loaded from CDN');
-            throw new Error('SQL.js not available');
-        }
-        
-        const SQL = await window.initSqlJs({
-            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        });
-        
-        console.log('SQL.js loaded successfully');
-        
-        // Try to load existing database file first
-        let loadedExisting = false;
-        try {
-            console.log('Checking for existing database file...');
-            const response = await fetch('./floorball_data.sqlite');
-            if (response.ok) {
-                console.log('Loading existing database file...');
-                const dbBuffer = await response.arrayBuffer();
-                this.db = new SQL.Database(new Uint8Array(dbBuffer));
-                console.log('Existing database file loaded successfully');
-
-                // Verify tables exist
-                const tables = this.db.exec("SELECT name FROM sqlite_master WHERE type='table'");
-                console.log('Existing tables:', tables);
-                loadedExisting = true;
-            }
-        } catch (error) {
-            console.log('No existing database file found, creating new one...');
-        }
-
-        if (loadedExisting) {
-            await this.migrateDatabase();
-            this.createOrUpdateViews();
-            await this.saveDatabaseToFile(); // Save after migration
-            return;
-        }
-        
-        // Create new database if no existing file
-        this.db = new SQL.Database();
-        console.log('New database created');
-        
-        // Create games table
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS games (
-                game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_name TEXT NOT NULL,
-                game_date TEXT NOT NULL,
-                team1 TEXT NOT NULL,
-                team2 TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // Create shots table with proper foreign key
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS shots (
-                shot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                date TEXT,
-                team1 TEXT,
-                team2 TEXT,
-                time INTEGER,
-                shooting_team TEXT,
-                result TEXT,
-                type TEXT,
-                xg REAL,
-                xgot REAL,
-                shooter TEXT,
-                passer TEXT,
-                t1lw TEXT,
-                t1c TEXT,
-                t1rw TEXT,
-                t1ld TEXT,
-                t1rd TEXT,
-                t1g TEXT,
-                t1x TEXT,
-                t2lw TEXT,
-                t2c TEXT,
-                t2rw TEXT,
-                t2ld TEXT,
-                t2rd TEXT,
-                t2g TEXT,
-                t2x TEXT,
-                pp INTEGER,
-                sh INTEGER,
-                distance REAL,
-                angle REAL,
-                x_m REAL,
-                y_m REAL,
-                x_graph REAL,
-                y_graph REAL,
-                player_team1 INTEGER,
-                player_team2 INTEGER,
-                FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
-            )
-        `);
-
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS shot_corrections (
-                shot_id INTEGER PRIMARY KEY,
-                time INTEGER,
-                shooting_team TEXT,
-                result TEXT,
-                type TEXT,
-                is_turnover INTEGER DEFAULT 0,
-                xg REAL,
-                xgot REAL,
-                shooter TEXT,
-                passer TEXT,
-                t1lw TEXT,
-                t1c TEXT,
-                t1rw TEXT,
-                t1ld TEXT,
-                t1rd TEXT,
-                t1g TEXT,
-                t1x TEXT,
-                t2lw TEXT,
-                t2c TEXT,
-                t2rw TEXT,
-                t2ld TEXT,
-                t2rd TEXT,
-                t2g TEXT,
-                t2x TEXT,
-                pp INTEGER,
-                sh INTEGER,
-                player_team1 INTEGER,
-                player_team2 INTEGER,
-                FOREIGN KEY (shot_id) REFERENCES shots (shot_id) ON DELETE CASCADE
-            )
-        `);
-
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS game_aliases (
-                game_id INTEGER PRIMARY KEY,
-                alias TEXT NOT NULL,
-                FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
-            )
-        `);
-
-        console.log('Database tables created successfully');
-
-        this.createOrUpdateViews();
-    }
-
-    async migrateDatabase() {
-        console.log('Checking database schema for migrations...');
-        await debugLog('Migration: Checking database schema');
-
-        try {
-            const tableInfo = this.db.exec("PRAGMA table_info(shots)");
-            const columns = tableInfo[0].values.map(row => row[1]);
-
-            console.log('Existing columns:', columns);
-            await debugLog('Migration: Existing columns', { columns, count: columns.length });
-
-            const requiredColumns = ['x_m', 'y_m', 'x_graph', 'y_graph'];
-            const missingColumns = requiredColumns.filter(col => !columns.includes(col));
-
-            if (missingColumns.length > 0) {
-                console.log('Missing columns detected, adding:', missingColumns);
-                await debugLog('Migration: Adding missing columns', { missingColumns });
-
-                missingColumns.forEach(colName => {
-                    this.db.run(`ALTER TABLE shots ADD COLUMN ${colName} REAL`);
-                    console.log(`Added column: ${colName}`);
-                });
-
-                await debugLog('Migration: Columns added successfully');
-
-                console.log('Calculating coordinates for existing shots...');
-                const shots = this.db.exec("SELECT shot_id, distance, angle FROM shots");
-
-                if (shots.length > 0) {
-                    shots[0].values.forEach(row => {
-                        const [shotId, distance, angle] = row;
-                        const coords = this.calculateCoordinates(distance, angle);
-
-                        this.db.run(`
-                            UPDATE shots
-                            SET x_m = ?, y_m = ?, x_graph = ?, y_graph = ?
-                            WHERE shot_id = ?
-                        `, [coords.x_m, coords.y_m, coords.x_graph, coords.y_graph, shotId]);
-                    });
-                    console.log(`Updated coordinates for ${shots[0].values.length} shots`);
-                    await debugLog('Migration: Updated coordinates', { shotCount: shots[0].values.length });
-                }
-            } else {
-                console.log('Database schema is up to date');
-                await debugLog('Migration: Schema is up to date', { columnCount: columns.length });
-            }
-
-            // Verify final schema
-            const finalTableInfo = this.db.exec("PRAGMA table_info(shots)");
-            const finalColumns = finalTableInfo[0].values.map(row => row[1]);
-            console.log('Final column count:', finalColumns.length);
-            await debugLog('Migration: Complete', { finalColumnCount: finalColumns.length, finalColumns });
-
-            // Recalculate all coordinates with the corrected formula
-            console.log('Recalculating coordinates for all existing shots...');
-            const allShots = this.db.exec("SELECT shot_id, distance, angle FROM shots");
-
-            if (allShots.length > 0 && allShots[0].values.length > 0) {
-                allShots[0].values.forEach(row => {
-                    const [shotId, distance, angle] = row;
-                    const coords = this.calculateCoordinates(distance, angle);
-
-                    this.db.run(`
-                        UPDATE shots
-                        SET x_m = ?, y_m = ?, x_graph = ?, y_graph = ?
-                        WHERE shot_id = ?
-                    `, [coords.x_m, coords.y_m, coords.x_graph, coords.y_graph, shotId]);
-                });
-                console.log(`Recalculated coordinates for ${allShots[0].values.length} shots`);
-                await debugLog('Migration: Recalculated all coordinates', { shotCount: allShots[0].values.length });
-            }
-
-            const tables = this.db.exec("SELECT name FROM sqlite_master WHERE type='table'");
-            const tableNames = tables.length > 0 ? tables[0].values.map(row => row[0]) : [];
-
-            if (!tableNames.includes('shot_corrections')) {
-                console.log('Creating shot_corrections table...');
-                await debugLog('Migration: Creating shot_corrections table');
-
-                this.db.run(`
-                    CREATE TABLE IF NOT EXISTS shot_corrections (
-                        shot_id INTEGER PRIMARY KEY,
-                        time INTEGER,
-                        shooting_team TEXT,
-                        result TEXT,
-                        type TEXT,
-                        is_turnover INTEGER DEFAULT 0,
-                        xg REAL,
-                        xgot REAL,
-                        shooter TEXT,
-                        passer TEXT,
-                        t1lw TEXT,
-                        t1c TEXT,
-                        t1rw TEXT,
-                        t1ld TEXT,
-                        t1rd TEXT,
-                        t1g TEXT,
-                        t1x TEXT,
-                        t2lw TEXT,
-                        t2c TEXT,
-                        t2rw TEXT,
-                        t2ld TEXT,
-                        t2rd TEXT,
-                        t2g TEXT,
-                        t2x TEXT,
-                        pp INTEGER,
-                        sh INTEGER,
-                        player_team1 INTEGER,
-                        player_team2 INTEGER,
-                        FOREIGN KEY (shot_id) REFERENCES shots (shot_id) ON DELETE CASCADE
-                    )
-                `);
-
-                console.log('shot_corrections table created');
-                await debugLog('Migration: shot_corrections table created successfully');
-            } else {
-                const correctionTableInfo = this.db.exec("PRAGMA table_info(shot_corrections)");
-                const correctionColumns = correctionTableInfo[0].values.map(row => row[1]);
-
-                if (!correctionColumns.includes('is_turnover')) {
-                    console.log('Adding is_turnover column to shot_corrections...');
-                    this.db.run(`ALTER TABLE shot_corrections ADD COLUMN is_turnover INTEGER DEFAULT 0`);
-                    console.log('is_turnover column added');
-                    await debugLog('Migration: Added is_turnover column to shot_corrections');
-                }
-            }
-
-            if (!tableNames.includes('game_aliases')) {
-                console.log('Creating game_aliases table...');
-                await debugLog('Migration: Creating game_aliases table');
-
-                this.db.run(`
-                    CREATE TABLE IF NOT EXISTS game_aliases (
-                        game_id INTEGER PRIMARY KEY,
-                        alias TEXT NOT NULL,
-                        FOREIGN KEY (game_id) REFERENCES games (game_id) ON DELETE CASCADE
-                    )
-                `);
-
-                console.log('game_aliases table created');
-                await debugLog('Migration: game_aliases table created successfully');
-            }
-
-        } catch (error) {
-            console.error('Migration error:', error);
-            await debugLog('Migration: ERROR', { error: error.message, stack: error.stack });
         }
     }
 
@@ -373,136 +73,6 @@ class FloorballApp {
         const y_graph = y_m * 30;
 
         return { x_m, y_m, x_graph, y_graph };
-    }
-
-    createOrUpdateViews() {
-        try {
-            this.db.run(`DROP VIEW IF EXISTS shots_view`);
-        } catch (error) {
-            console.log('No existing view to drop');
-        }
-
-        this.db.run(`
-            CREATE VIEW shots_view AS
-            SELECT
-                s.shot_id,
-                s.game_id,
-                s.date,
-                s.team1,
-                s.team2,
-                COALESCE(c.shooting_team, s.shooting_team) as shooting_team,
-                COALESCE(c.result, s.result) as result,
-                CASE
-                    WHEN c.shot_id IS NOT NULL THEN
-                        CASE
-                            WHEN c.is_turnover = 1 THEN 'Turnover | ' || COALESCE(c.type, s.type)
-                            ELSE COALESCE(c.type, s.type)
-                        END
-                    ELSE s.type
-                END as type,
-                COALESCE(c.xg, s.xg) as xg,
-                COALESCE(c.xgot, s.xgot) as xgot,
-                COALESCE(c.shooter, s.shooter) as shooter,
-                COALESCE(c.passer, s.passer) as passer,
-                COALESCE(c.t1lw, s.t1lw) as t1lw,
-                COALESCE(c.t1c, s.t1c) as t1c,
-                COALESCE(c.t1rw, s.t1rw) as t1rw,
-                COALESCE(c.t1ld, s.t1ld) as t1ld,
-                COALESCE(c.t1rd, s.t1rd) as t1rd,
-                COALESCE(c.t1g, s.t1g) as t1g,
-                COALESCE(c.t1x, s.t1x) as t1x,
-                COALESCE(c.t2lw, s.t2lw) as t2lw,
-                COALESCE(c.t2c, s.t2c) as t2c,
-                COALESCE(c.t2rw, s.t2rw) as t2rw,
-                COALESCE(c.t2ld, s.t2ld) as t2ld,
-                COALESCE(c.t2rd, s.t2rd) as t2rd,
-                COALESCE(c.t2g, s.t2g) as t2g,
-                COALESCE(c.t2x, s.t2x) as t2x,
-                COALESCE(c.pp, s.pp) as pp,
-                COALESCE(c.sh, s.sh) as sh,
-                COALESCE(c.time, s.time) as time,
-                s.distance,
-                s.angle,
-                s.x_m,
-                s.y_m,
-                s.x_graph,
-                s.y_graph,
-                COALESCE(c.player_team1, s.player_team1) as player_team1,
-                COALESCE(c.player_team2, s.player_team2) as player_team2
-            FROM shots s
-            LEFT JOIN shot_corrections c ON s.shot_id = c.shot_id
-        `);
-
-        console.log('Database views created/updated successfully');
-    }
-
-    async saveDatabaseToFile() {
-        try {
-            const dbArray = this.db.export();
-            console.log('Database size:', dbArray.length, 'bytes');
-            await debugLog('Saving database to project folder', { size: dbArray.length });
-            
-            // Save directly to server (no download popup)
-            await this.uploadDatabaseToServer(dbArray);
-            
-        } catch (error) {
-            console.error('Error saving database file:', error);
-            await debugLog('Error saving database file', { error: error.message });
-        }
-    }
-    
-    async uploadDatabaseToServer(dbArray) {
-        try {
-            const response = await fetch('/api/save-database', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                },
-                body: dbArray
-            });
-            
-            if (response.ok) {
-                console.log('Database saved to project folder successfully');
-                await debugLog('Database saved to project folder successfully');
-                this.showStatus('Database saved successfully to project folder', 'success');
-            } else {
-                console.error('Failed to save database to server');
-                await debugLog('Failed to save database to server');
-                this.showStatus('Failed to save database to project folder', 'error');
-            }
-        } catch (error) {
-            console.error('Error uploading database to server:', error);
-            await debugLog('Error uploading database to server', { error: error.message });
-            this.showStatus('Error saving database to project folder', 'error');
-        }
-    }
-
-    checkDatabaseState() {
-        try {
-            console.log('=== Database State Check ===');
-            
-            // Check games table
-            const games = this.db.exec("SELECT * FROM games");
-            console.log('Games in database:', games.length > 0 ? games[0].values : 'No games');
-            
-            // Check shots table
-            const shots = this.db.exec("SELECT COUNT(*) as total FROM shots");
-            console.log('Total shots in database:', shots.length > 0 ? shots[0].values[0][0] : 'No shots');
-            
-            // Check database file size
-            const dbArray = this.db.export();
-            console.log('Database size:', dbArray.length, 'bytes');
-            
-            console.log('=== End Database State ===');
-        } catch (error) {
-            console.error('Error checking database state:', error);
-        }
-    }
-
-    // SQL.js loaded via CDN in HTML, so this method is not needed
-    async loadSqlJs() {
-        console.log('SQL.js should already be loaded from CDN');
-        await debugLog('loadSqlJs called - SQL.js should be from CDN');
     }
 
     setupEventListeners() {
@@ -935,7 +505,7 @@ class FloorballApp {
 
             console.log('Loading ALL existing shots from database for duplicate check...');
             let allExistingShots = [];
-            const allShotsResult = this.db.exec(`SELECT * FROM shots`);
+            const allShotsResult = this.dbManager.db.exec(`SELECT * FROM shots`);
             if (allShotsResult.length > 0) {
                 const columns = allShotsResult[0].columns;
                 allExistingShots = allShotsResult[0].values.map(row => {
@@ -961,7 +531,7 @@ class FloorballApp {
                 console.log('===== END HASH DEBUG =====');
             }
 
-            const existingGameResult = this.db.exec(`
+            const existingGameResult = this.dbManager.db.exec(`
                 SELECT game_id FROM games
                 WHERE LOWER(TRIM(game_name)) = LOWER(TRIM(?))
                 AND game_date = ?
@@ -974,12 +544,12 @@ class FloorballApp {
                 gameId = existingGameResult[0].values[0][0];
                 console.log(`Found existing game with ID: ${gameId}`);
             } else {
-                this.db.run(`
+                this.dbManager.db.run(`
                     INSERT INTO games (game_name, game_date, team1, team2)
                     VALUES (?, ?, ?, ?)
                 `, [gameName, gameDate, team1, team2]);
 
-                const gameResult = this.db.exec("SELECT last_insert_rowid()");
+                const gameResult = this.dbManager.db.exec("SELECT last_insert_rowid()");
                 gameId = gameResult[0].values[0][0];
                 isNewGame = true;
                 console.log(`Created new game with ID: ${gameId}`);
@@ -1030,7 +600,7 @@ class FloorballApp {
                             });
                         }
 
-                        this.db.run(`
+                        this.dbManager.db.run(`
                             INSERT INTO shots (
                                 game_id, date, team1, team2, time, shooting_team, result, type,
                                 xg, xgot, shooter, passer, t1lw, t1c, t1rw, t1ld, t1rd, t1g, t1x,
@@ -1101,7 +671,7 @@ class FloorballApp {
 
             if (uniqueCount === 0 && duplicateCount > 0) {
                 if (isNewGame) {
-                    this.db.run(`DELETE FROM games WHERE game_id = ?`, [gameId]);
+                    this.dbManager.db.run(`DELETE FROM games WHERE game_id = ?`, [gameId]);
                     console.log('Deleted empty game - all shots were duplicates');
                 }
                 this.showStatus(`Import aborted: All ${duplicateCount} shots already exist in database!`, 'error');
@@ -1127,8 +697,8 @@ class FloorballApp {
             document.getElementById('import-btn').disabled = true;
             this.currentData = null;
 
-            this.checkDatabaseState();
-            await this.saveDatabaseToFile();
+            this.dbManager.checkDatabaseState();
+            await this.dbManager.saveDatabaseToFile();
             await this.loadGamesList();
             await this.loadCorrectionsGamesList();
 
@@ -1140,15 +710,7 @@ class FloorballApp {
 
     async loadGamesList() {
         try {
-            const games = this.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
-            const aliases = this.db.exec("SELECT game_id, alias FROM game_aliases");
-
-            const aliasMap = {};
-            if (aliases.length > 0) {
-                aliases[0].values.forEach(([gameId, alias]) => {
-                    aliasMap[gameId] = alias;
-                });
-            }
+            const { games, aliases } = await this.dbManager.loadGamesList();
 
             const gameSelect = document.getElementById('selected-game');
             gameSelect.innerHTML = '<option value="all" selected>All Games</option>';
@@ -1159,9 +721,9 @@ class FloorballApp {
             }
 
             if (games.length > 0) {
-                games[0].values.forEach(game => {
+                games.forEach(game => {
                     const [gameId, gameName, gameDate, team1, team2] = game;
-                    const displayName = aliasMap[gameId] || `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
+                    const displayName = aliases[gameId] || `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
 
                     const option = document.createElement('option');
                     option.value = gameId;
@@ -1198,12 +760,8 @@ class FloorballApp {
         saveBtn.disabled = false;
 
         try {
-            const result = this.db.exec("SELECT alias FROM game_aliases WHERE game_id = ?", [gameId]);
-            if (result.length > 0 && result[0].values.length > 0) {
-                aliasInput.value = result[0].values[0][0];
-            } else {
-                aliasInput.value = '';
-            }
+            const alias = this.dbManager.loadGameAlias(gameId);
+            aliasInput.value = alias || '';
         } catch (error) {
             console.error('Error loading game alias:', error);
             aliasInput.value = '';
@@ -1220,22 +778,14 @@ class FloorballApp {
         }
 
         try {
-            if (alias) {
-                const existing = this.db.exec("SELECT game_id FROM game_aliases WHERE game_id = ?", [gameId]);
+            const success = await this.dbManager.saveGameAlias(gameId, alias);
 
-                if (existing.length > 0 && existing[0].values.length > 0) {
-                    this.db.run("UPDATE game_aliases SET alias = ? WHERE game_id = ?", [alias, gameId]);
-                } else {
-                    this.db.run("INSERT INTO game_aliases (game_id, alias) VALUES (?, ?)", [gameId, alias]);
-                }
+            if (success) {
+                await this.loadGamesList();
+                alert('Game alias saved successfully!');
             } else {
-                this.db.run("DELETE FROM game_aliases WHERE game_id = ?", [gameId]);
+                alert('Error saving game alias');
             }
-
-            await this.saveDatabaseToFile();
-            await this.loadGamesList();
-
-            alert('Game alias saved successfully!');
         } catch (error) {
             console.error('Error saving game alias:', error);
             alert('Error saving game alias: ' + error.message);
@@ -1255,14 +805,17 @@ class FloorballApp {
 
             if (gameId === 'all') {
                 console.log('Loading data for ALL games');
-                shots = this.db.exec(`
-                    SELECT * FROM shots ORDER BY game_id, time
+                shots = this.dbManager.db.exec(`
+                    SELECT * FROM shots_view
+                    ORDER BY game_id, shot_id
                 `);
                 console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} total shots across all games`);
             } else {
                 console.log(`Loading data for game ID: ${gameId}`);
-                shots = this.db.exec(`
-                    SELECT * FROM shots WHERE game_id = ? ORDER BY time
+                shots = this.dbManager.db.exec(`
+                    SELECT * FROM shots_view
+                    WHERE game_id = ?
+                    ORDER BY shot_id
                 `, [gameId]);
                 console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} shots for game ${gameId}`);
             }
@@ -1332,7 +885,7 @@ class FloorballApp {
 
         let allGamesData = null;
         try {
-            const allShots = this.db.exec(`SELECT * FROM shots ORDER BY game_id, time`);
+            const allShots = this.dbManager.db.exec(`SELECT * FROM shots ORDER BY game_id, time`);
             if (allShots.length > 0 && allShots[0].values.length > 0) {
                 const columns = allShots[0].columns;
                 allGamesData = allShots[0].values.map(row => {
@@ -1495,11 +1048,11 @@ class FloorballApp {
                 console.log('=== DIRECT DATABASE CHECK ===');
 
                 // Query 1: Total shots in database
-                const totalShots = this.db.exec(`SELECT COUNT(*) as count FROM shots`);
+                const totalShots = this.dbManager.db.exec(`SELECT COUNT(*) as count FROM shots`);
                 console.log('Total shots in database:', totalShots[0]?.values[0][0]);
 
                 // Query 2: Shots by team
-                const shotsByTeam = this.db.exec(`
+                const shotsByTeam = this.dbManager.db.exec(`
                     SELECT shooting_team, COUNT(*) as count
                     FROM shots
                     GROUP BY shooting_team
@@ -1510,7 +1063,7 @@ class FloorballApp {
                 });
 
                 // Query 3: Griezitis on field for opponent shots (matching your SQL)
-                const griezitisOpponentShots = this.db.exec(`
+                const griezitisOpponentShots = this.dbManager.db.exec(`
                     SELECT COUNT(*) as count
                     FROM shots
                     WHERE team2 = shooting_team
@@ -1525,7 +1078,7 @@ class FloorballApp {
                 console.log('Griezitis on field for opponent shots (SQL):', griezitisOpponentShots[0]?.values[0][0]);
 
                 // Query 4: Griezitis on field for Team 1 shots
-                const griezitisTeamShots = this.db.exec(`
+                const griezitisTeamShots = this.dbManager.db.exec(`
                     SELECT COUNT(*) as count
                     FROM shots
                     WHERE team1 = shooting_team
@@ -1540,7 +1093,7 @@ class FloorballApp {
                 console.log('Griezitis on field for Team 1 shots (SQL):', griezitisTeamShots[0]?.values[0][0]);
 
                 // Query 5: Check team structure
-                const teamStructure = this.db.exec(`
+                const teamStructure = this.dbManager.db.exec(`
                     SELECT DISTINCT team1, team2, shooting_team
                     FROM shots
                     LIMIT 5
@@ -4848,7 +4401,7 @@ class FloorballApp {
 
     getAllPlayers() {
         try {
-            const result = this.db.exec(`
+            const result = this.dbManager.db.exec(`
                 SELECT DISTINCT shooter FROM shots WHERE shooter IS NOT NULL AND shooter != ''
                 UNION
                 SELECT DISTINCT passer FROM shots WHERE passer IS NOT NULL AND passer != ''
@@ -4879,7 +4432,7 @@ class FloorballApp {
 
     async loadCorrectionsGamesList() {
         try {
-            const games = this.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
+            const games = this.dbManager.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
             const gameSelect = document.getElementById('corrections-game-select');
 
             if (!gameSelect) return;
@@ -4909,109 +4462,19 @@ class FloorballApp {
         }
 
         try {
-            const gameResult = this.db.exec(`
-                SELECT team1, team2 FROM games WHERE game_id = ?
-            `, [gameId]);
+            const gameData = await this.dbManager.loadCorrectionsForGame(gameId);
 
-            if (gameResult.length === 0 || gameResult[0].values.length === 0) {
+            if (!gameData) {
                 container.innerHTML = '<p class="empty-state">Game not found</p>';
                 return;
             }
 
-            const [team1, team2] = gameResult[0].values[0];
-            const gameTeams = [team1, team2];
+            const { gameName, gameDate, team1, team2, shots, corrections } = gameData;
+            const gameTeams = [team1, team2].filter(t => t); // Filter out null teams
 
-            const shotsResult = this.db.exec(`
-                SELECT
-                    s.shot_id, s.time, s.shooting_team, s.result, s.type,
-                    s.shooter, s.passer, s.xg, s.xgot,
-                    s.t1lw, s.t1c, s.t1rw, s.t1ld, s.t1rd, s.t1g, s.t1x,
-                    s.t2lw, s.t2c, s.t2rw, s.t2ld, s.t2rd, s.t2g, s.t2x,
-                    s.pp, s.sh, s.player_team1, s.player_team2
-                FROM shots s
-                WHERE s.game_id = ?
-                ORDER BY s.time
-            `, [gameId]);
-
-            const correctionsResult = this.db.exec(`
-                SELECT * FROM shot_corrections
-            `);
-
-            if (shotsResult.length === 0 || shotsResult[0].values.length === 0) {
+            if (!shots || shots.length === 0) {
                 container.innerHTML = '<p class="empty-state">No shots found for this game</p>';
                 return;
-            }
-
-            const shots = shotsResult[0].values.map(row => {
-                const typeStr = row[4] || '';
-                const isTurnover = typeStr.includes('Turnover');
-                const baseType = isTurnover ? typeStr.replace('Turnover | ', '') : typeStr;
-
-                return {
-                    shot_id: row[0],
-                    time: row[1],
-                    shooting_team: row[2],
-                    result: row[3],
-                    type: baseType,
-                    is_turnover: isTurnover ? 1 : 0,
-                    shooter: row[5],
-                    passer: row[6],
-                    xg: row[7],
-                    xgot: row[8],
-                    t1lw: row[9],
-                    t1c: row[10],
-                    t1rw: row[11],
-                    t1ld: row[12],
-                    t1rd: row[13],
-                    t1g: row[14],
-                    t1x: row[15],
-                    t2lw: row[16],
-                    t2c: row[17],
-                    t2rw: row[18],
-                    t2ld: row[19],
-                    t2rd: row[20],
-                    t2g: row[21],
-                    t2x: row[22],
-                    pp: row[23],
-                    sh: row[24],
-                    player_team1: row[25],
-                    player_team2: row[26]
-                };
-            });
-
-            const corrections = {};
-            if (correctionsResult.length > 0) {
-                correctionsResult[0].values.forEach(row => {
-                    corrections[row[0]] = {
-                        time: row[1],
-                        shooting_team: row[2],
-                        result: row[3],
-                        type: row[4],
-                        is_turnover: row[5],
-                        xg: row[6],
-                        xgot: row[7],
-                        shooter: row[8],
-                        passer: row[9],
-                        t1lw: row[10],
-                        t1c: row[11],
-                        t1rw: row[12],
-                        t1ld: row[13],
-                        t1rd: row[14],
-                        t1g: row[15],
-                        t1x: row[16],
-                        t2lw: row[17],
-                        t2c: row[18],
-                        t2rw: row[19],
-                        t2ld: row[20],
-                        t2rd: row[21],
-                        t2g: row[22],
-                        t2x: row[23],
-                        pp: row[24],
-                        sh: row[25],
-                        player_team1: row[26],
-                        player_team2: row[27]
-                    };
-                });
             }
 
             const allPlayers = this.getAllPlayers();
@@ -5406,10 +4869,10 @@ class FloorballApp {
                 }
             });
 
-            const existingCorrection = this.db.exec(`SELECT shot_id FROM shot_corrections WHERE shot_id = ?`, [shotId]);
+            const existingCorrection = this.dbManager.db.exec(`SELECT shot_id FROM shot_corrections WHERE shot_id = ?`, [shotId]);
 
             if (existingCorrection.length > 0 && existingCorrection[0].values.length > 0) {
-                this.db.run(`
+                this.dbManager.db.run(`
                     UPDATE shot_corrections
                     SET time = ?, result = ?, type = ?, is_turnover = ?, shooting_team = ?, shooter = ?, passer = ?,
                         t1lw = ?, t1c = ?, t1rw = ?, t1ld = ?, t1rd = ?, t1g = ?, t1x = ?,
@@ -5435,7 +4898,7 @@ class FloorballApp {
                     shotId
                 ]);
             } else {
-                this.db.run(`
+                this.dbManager.db.run(`
                     INSERT INTO shot_corrections (
                         shot_id, time, result, type, is_turnover, shooting_team, shooter, passer,
                         t1lw, t1c, t1rw, t1ld, t1rd, t1g, t1x, pp, sh
@@ -5462,7 +4925,7 @@ class FloorballApp {
                 ]);
             }
 
-            await this.saveDatabaseToFile();
+            await this.dbManager.saveDatabaseToFile();
 
             row.classList.add('has-correction');
             const gameId = document.getElementById('corrections-game-select').value;
@@ -5476,8 +4939,8 @@ class FloorballApp {
 
     async deleteCorrection(shotId) {
         try {
-            this.db.run(`DELETE FROM shot_corrections WHERE shot_id = ?`, [shotId]);
-            await this.saveDatabaseToFile();
+            this.dbManager.db.run(`DELETE FROM shot_corrections WHERE shot_id = ?`, [shotId]);
+            await this.dbManager.saveDatabaseToFile();
 
             const gameId = document.getElementById('corrections-game-select').value;
             this.loadCorrectionsForGame(gameId);
