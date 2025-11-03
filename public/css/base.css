@@ -142,13 +142,6 @@ main {
     gap: 10px;
 }
 
-.shooter-search-input {
-    margin-bottom: 5px;
-    width: 100%;
-    padding: 5px;
-    box-sizing: border-box;
-}
-
 .tooltip {
     position: absolute;
     padding: 10px;

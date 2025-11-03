@@ -15,6 +15,9 @@ logs/
 debug/
 *.log.*
 
+# Development folder
+dev/
+
 # Database files (uncomment if you want to commit the database)
 *.sqlite
 *.db
@@ -25,6 +28,7 @@ backup_*/
 *.old
 ffhs_floorbal_vis_old/
 backups/
+refactor-backup/
 
 # OS files
 .DS_Store

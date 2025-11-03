@@ -65,7 +65,7 @@ class DashboardSidebar {
                 toggleShotDots.classList.toggle('active');
                 const isActive = toggleShotDots.classList.contains('active');
                 console.log('Toggle shot dots:', isActive);
-                this.app.toggleShotDots(isActive);
+                this.app.shotMap.toggleShotDots(isActive);
             });
         }
 
@@ -75,7 +75,7 @@ class DashboardSidebar {
                 toggleHeatmap.classList.toggle('active');
                 const isActive = toggleHeatmap.classList.contains('active');
                 console.log('Toggle heatmap:', isActive);
-                this.app.toggleHeatmap(isActive);
+                this.app.shotMap.toggleHeatmap(isActive);
             });
         }
     }

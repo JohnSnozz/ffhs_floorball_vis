@@ -65,10 +65,10 @@ Bun.serve({
         const logEntry = await req.json();
         const date = new Date().toISOString().split('T')[0];
         const logFileName = `${date}-debug.log`;
-        const logPath = join('./logs', logFileName);
+        const logPath = join('./dev/logs', logFileName);
 
-        if (!existsSync('./logs')) {
-          await mkdir('./logs', { recursive: true });
+        if (!existsSync('./dev/logs')) {
+          await mkdir('./dev/logs', { recursive: true });
         }
 
         const timestamp = new Date().toISOString();

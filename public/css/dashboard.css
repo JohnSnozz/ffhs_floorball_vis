@@ -246,6 +246,13 @@
     border-color: #00D9FF;
 }
 
+#shooter-search {
+    margin-bottom: 5px;
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
 .toggle-button-group {
     display: flex;
     flex-wrap: wrap;
