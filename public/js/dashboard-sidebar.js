@@ -210,6 +210,8 @@ class DashboardSidebar {
             });
         }
 
+        this.app.currentTeamFilteredData = teamFilteredData;
+
         let filteredData = teamFilteredData;
 
         if (selectedShooters.length > 0) {

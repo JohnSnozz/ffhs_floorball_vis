@@ -36,9 +36,24 @@ class GoalkeeperQuadrant {
             return;
         }
 
-        // Filter nur shots on goal (Goal oder Saved)
+        // Filter nur shots on goal (Goal oder Saved) von Team 2 gegen Team 1
+        const team1Name = this.currentData[0]?.team1;
+
         let shotsOnGoal = this.currentData.filter(shot => {
-            return shot.result === 'Goal' || shot.result === 'Saved';
+            // Nur Schüsse von Team 2 (shooting_team !== team1)
+            const isTeam2Shooting = shot.shooting_team !== team1Name;
+            if (!isTeam2Shooting) return false;
+
+            // Nur Goal oder Saved
+            const resultIsRelevant = shot.result === 'Goal' || shot.result === 'Saved';
+            if (!resultIsRelevant) return false;
+
+            // Kein 6v5 ohne Torhüter (t1x muss leer sein)
+            if (shot.t1x !== null && shot.t1x !== undefined && shot.t1x !== '') {
+                return false;
+            }
+
+            return true;
         });
 
         // Filter nach Goalkeeper wenn ausgewählt
@@ -99,9 +114,9 @@ class GoalkeeperQuadrant {
 
         // SVG Setup - rechtsbündig in 300px Container
         const containerWidth = 300;
-        const margin = { top: 0, right: 0, bottom: 20, left: 0 };
+        const margin = { top: 0, right: 0, bottom: 5, left: 0 };
         const width = containerWidth - margin.left - margin.right;
-        const height = 220;
+        const height = 235;
 
         // Title vor SVG
         container.append('div')
@@ -142,12 +157,12 @@ class GoalkeeperQuadrant {
         // Links = GOAL, Rechts = SAVED
         const layout = [
             [
-                { key: 'acceptable', label: 'Acceptable', subtitle: '>0.3 xG', color: '#F59E0B' },
+                { key: 'acceptable', label: 'Acceptable Goals', subtitle: '>0.3 xG', color: '#F59E0B' },
                 { key: 'heroSaves', label: 'Hero Saves', subtitle: '>0.3 xG', color: '#10B981' }
             ],
             [
                 { key: 'lowXgGoals', label: 'Low xG Goals', subtitle: '<0.1 xG', color: '#7C3AED' },
-                { key: 'routine', label: 'Routine', subtitle: '0-0.3 xG', color: '#00D9FF' }
+                { key: 'routine', label: 'Routine Saves', subtitle: '0-0.3 xG', color: '#00D9FF' }
             ]
         ];
 
@@ -268,24 +283,6 @@ class GoalkeeperQuadrant {
             .attr('stroke-width', 1.5)
             .attr('opacity', 0.3);
 
-        // Unten: GOAL / SAVED
-        g.append('text')
-            .attr('x', quadWidth / 2)
-            .attr('y', height + 15)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('fill', '#A0A0A8')
-            .style('font-weight', '600')
-            .text('GOAL');
-
-        g.append('text')
-            .attr('x', quadWidth + quadWidth / 2)
-            .attr('y', height + 15)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('fill', '#A0A0A8')
-            .style('font-weight', '600')
-            .text('SAVED');
     }
 }
 
