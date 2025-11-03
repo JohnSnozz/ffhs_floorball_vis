@@ -460,6 +460,70 @@
     height: 100%;
 }
 
+.toggle-button[data-value="Goal"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 8px 0;
+    border-color: transparent #7FB069 transparent transparent;
+}
+
+.toggle-button[data-value="Goal"]::before {
+    background-color: #7FB069;
+}
+
+.toggle-button[data-value="Saved"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 8px 0;
+    border-color: transparent #5B8DBE transparent transparent;
+}
+
+.toggle-button[data-value="Saved"]::before {
+    background-color: #5B8DBE;
+}
+
+.toggle-button[data-value="Missed"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 8px 0;
+    border-color: transparent #E8B44F transparent transparent;
+}
+
+.toggle-button[data-value="Missed"]::before {
+    background-color: #E8B44F;
+}
+
+.toggle-button[data-value="Blocked"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 8px 0;
+    border-color: transparent #E06B47 transparent transparent;
+}
+
+.toggle-button[data-value="Blocked"]::before {
+    background-color: #E06B47;
+}
+
 .toggle-button.turnover-filter.active {
     background-color: rgba(34, 197, 94, 0.15);
     color: #22c55e;

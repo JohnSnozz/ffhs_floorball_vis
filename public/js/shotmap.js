@@ -677,8 +677,8 @@ class ShotMap {
         const leagueAverage = remappedShots.filter(d => d.result === 'Goal').length / remappedShots.length;
 
         const colorScale = d3.scaleLinear()
-            .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
-            .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+            .domain([0, 0.3, 0.6])
+            .range(['#7C3AED', '#00D9FF', '#10B981'])
             .clamp(true);
 
         const sizeScale = d3.scalePow()
@@ -745,7 +745,7 @@ class ShotMap {
             .style('fill', d => colorScale(d.successRate))
             .style('stroke', '#fff')
             .style('stroke-width', 1)
-            .style('opacity', 0.85)
+            .style('opacity', 0.93)
             .on('mouseover', function(event, d) {
                 d3.select(this)
                     .style('opacity', 1)
@@ -767,7 +767,7 @@ class ShotMap {
             })
             .on('mouseout', function(event, d) {
                 d3.select(this)
-                    .style('opacity', 0.85)
+                    .style('opacity', 0.93)
                     .style('stroke-width', 1);
 
                 tooltip.transition()
@@ -1191,8 +1191,8 @@ class ShotMap {
             const leagueAverage = shotsWithCoords.filter(d => d.result === 'Goal').length / shotsWithCoords.length;
 
             const colorScale = d3.scaleLinear()
-                .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
-                .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+                .domain([0, 0.3, 0.6])
+                .range(['#7C3AED', '#00D9FF', '#10B981'])
                 .clamp(true);
 
             const sizeScale = d3.scalePow()
@@ -1238,7 +1238,7 @@ class ShotMap {
                 .style('fill', d => colorScale(d.successRate))
                 .style('stroke', '#fff')
                 .style('stroke-width', 1)
-                .style('opacity', 0.85)
+                .style('opacity', 0.93)
                 .on('mouseover', function(event, d) {
                     d3.select(this)
                         .style('opacity', 1)
@@ -1264,7 +1264,7 @@ class ShotMap {
                 })
                 .on('mouseout', function(event, d) {
                     d3.select(this)
-                        .style('opacity', 0.85)
+                        .style('opacity', 0.93)
                         .style('stroke-width', 1);
 
                     tooltip.transition()
@@ -1350,8 +1350,8 @@ class ShotMap {
             heatmapLog.push(`League average success rate: ${(leagueAverage * 100).toFixed(1)}%`);
 
             const colorScale = d3.scaleLinear()
-                .domain([0, leagueAverage * 0.8, leagueAverage, leagueAverage * 1.2, 0.6])
-                .range(['#7C3AED', '#00D9FF', '#00D9FF', '#10B981', '#10B981'])
+                .domain([0, 0.3, 0.6])
+                .range(['#7C3AED', '#00D9FF', '#10B981'])
                 .clamp(true);
             heatmapLog.push('Color scale created');
 
@@ -1453,7 +1453,7 @@ class ShotMap {
                 .style('fill', d => colorScale(d.successRate))
                 .style('stroke', '#fff')
                 .style('stroke-width', 1)
-                .style('opacity', 0.85)
+                .style('opacity', 0.93)
             .on('mouseover', function(event, d) {
                 d3.select(this)
                     .style('opacity', 1)
@@ -1479,7 +1479,7 @@ class ShotMap {
             })
             .on('mouseout', function(event, d) {
                 d3.select(this)
-                    .style('opacity', 0.85)
+                    .style('opacity', 0.93)
                     .style('stroke-width', 1);
 
                 tooltip.transition()
@@ -1595,13 +1595,13 @@ class ShotMap {
         }
 
         this.shotMapSvg.selectAll('.hexagon')
-            .style('opacity', 0.85)
+            .style('opacity', 0.93)
             .style('stroke', '#fff')
             .style('stroke-width', 1)
             .classed('highlighted', false);
 
         this.shotMapSvg.selectAll('.upper-split-group .hexagon, .lower-split-group .hexagon')
-            .style('opacity', 0.85)
+            .style('opacity', 0.93)
             .style('stroke', '#fff')
             .style('stroke-width', 1)
             .classed('highlighted', false);
