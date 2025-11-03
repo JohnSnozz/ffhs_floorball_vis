@@ -50,6 +50,9 @@ class FloorballApp {
             this.performanceSpider = new PerformanceSpider(this);
             console.log('Performance spider initialized');
 
+            this.xgScatter = new XGScatterPlot(this);
+            console.log('xG Scatter plot initialized');
+
             this.goalkeeperStats = new GoalkeeperStats(this);
             console.log('Goalkeeper stats initialized');
 

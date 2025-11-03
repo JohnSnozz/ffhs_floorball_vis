@@ -6,11 +6,10 @@
     width: 300px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    justify-content: space-between;
     padding: 20px 0;
     box-sizing: border-box;
     z-index: 10;
-    justify-content: flex-start;
 }
 
 .goalkeeper-selector {
@@ -59,7 +58,6 @@
     min-height: 0;
     position: relative;
     flex-shrink: 0;
-    margin-top: 5px;
 }
 
 .goalkeeper-dumbbell svg {
@@ -68,13 +66,30 @@
 }
 
 .goalkeeper-radial {
-    height: auto;
+    height: 220px;
     min-height: 0;
     position: relative;
     flex-shrink: 0;
-    margin-top: 5px;
     border: 1px solid transparent;
     box-sizing: border-box;
+}
+
+.goalkeeper-quadrant-container {
+    width: 300px;
+    height: auto;
+    min-height: 0;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.goalkeeper-quadrant {
+    width: 100%;
+    height: auto;
 }
 
 .goalkeeper-radial svg {

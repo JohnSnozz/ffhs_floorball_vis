@@ -303,3 +303,45 @@ body.dev-containers-visible .goalkeeper-radial::before {
     z-index: 10010;
     border: 2px solid #000;
 }
+
+body.dev-containers-visible .xgscatter {
+    outline: 3px solid rgba(255, 150, 50, 1) !important;
+}
+
+body.dev-containers-visible .xgscatter::before {
+    content: '.xgscatter';
+    position: fixed;
+    top: 430px;
+    right: 10px;
+    background: rgba(255, 150, 50, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .goalkeeper-quadrant-container {
+    outline: 3px solid rgba(200, 100, 255, 1) !important;
+}
+
+body.dev-containers-visible .goalkeeper-quadrant-container::before {
+    content: '.goalkeeper-quadrant-container (300px)';
+    position: fixed;
+    top: 460px;
+    right: 10px;
+    background: rgba(200, 100, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}

@@ -124,6 +124,15 @@ class GoalkeeperRadialChart {
         const container = d3.select('#goalkeeper-radial');
         container.selectAll('*').remove();
 
+        // Title
+        container.append('div')
+            .style('text-align', 'right')
+            .style('font-size', '11px')
+            .style('color', '#A0A0A8')
+            .style('font-weight', '600')
+            .style('margin-bottom', '8px')
+            .text('Save Rate by Angle');
+
         if (!this.currentGameData || this.currentGameData.length === 0) {
             console.log('No game data');
             return;

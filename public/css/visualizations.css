@@ -78,6 +78,14 @@
     pointer-events: auto;
 }
 
+.xgscatter {
+    width: 300px;
+    height: 300px;
+    background-color: #1A1A1D;
+    border: none;
+    box-sizing: border-box;
+}
+
 .chart-section.full-width {
     grid-column: 1 / -1;
 }
@@ -197,9 +205,9 @@
 }
 
 .dot {
-    fill: #007bff;
+    fill: #B3F5FF;
     stroke: #fff;
-    stroke-width: 2px;
+    stroke-width: 0.5;
 }
 
 @media (max-width: 768px) {

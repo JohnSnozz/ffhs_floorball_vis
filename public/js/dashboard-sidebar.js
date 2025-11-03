@@ -225,6 +225,15 @@ class DashboardSidebar {
         }
 
         this.app.goalkeeperStats.updateGoalkeeperHistogram();
+
+        if (this.app.xgScatter) {
+            this.app.xgScatter.setFilters(
+                this.app.selectedShooter,
+                selectedTypes,
+                this.turnoverState
+            );
+            this.app.xgScatter.createScatterPlot(this.app.currentGameData);
+        }
     }
 }
 

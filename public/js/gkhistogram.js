@@ -502,9 +502,19 @@ class GoalkeeperHistogram {
 
         if (selectedShots.length === 0 && allShots.length === 0) return;
 
-        const margin = { top: 10, right: 40, bottom: 40, left: 100 };
+        // Title
+        d3.select(container)
+            .append('div')
+            .style('text-align', 'right')
+            .style('font-size', '11px')
+            .style('color', '#A0A0A8')
+            .style('font-weight', '600')
+            .style('margin-bottom', '5px')
+            .text('Dumbbell Diagram');
+
+        const margin = { top: 5, right: 40, bottom: 40, left: 100 };
         const width = container.clientWidth - margin.left - margin.right;
-        const height = container.clientHeight - margin.top - margin.bottom;
+        const height = container.clientHeight - margin.top - margin.bottom - 20;
 
         let dumbbellTooltip = d3.select('body').select('.dumbbell-tooltip');
         if (dumbbellTooltip.empty()) {
@@ -545,7 +555,7 @@ class GoalkeeperHistogram {
             { label: 'Avg. Dist', savedKey: 'avgSavedDistance', goalKey: 'avgGoalDistance', rangeKey: 'distance' }
         ];
 
-        const rowHeight = height / metrics.length;
+        const rowHeight = (height - 10) / metrics.length;
 
         const isFiltered = this.selectedGoalkeeper || (selectedShots.length < allShots.length);
 
@@ -739,7 +749,7 @@ class GoalkeeperHistogram {
                 // Add value label above saved circle
                 const savedValueText = metric.rangeKey === 'distance'
                     ? selectedSavedVal.toFixed(1)
-                    : selectedSavedVal.toFixed(1);
+                    : selectedSavedVal.toFixed(2);
 
                 rowGroup.append('text')
                     .attr('x', scale(selectedSavedVal))
@@ -762,7 +772,7 @@ class GoalkeeperHistogram {
                 // Add value label above goal circle
                 const goalValueText = metric.rangeKey === 'distance'
                     ? selectedGoalVal.toFixed(1)
-                    : selectedGoalVal.toFixed(1);
+                    : selectedGoalVal.toFixed(2);
 
                 rowGroup.append('text')
                     .attr('x', scale(selectedGoalVal))

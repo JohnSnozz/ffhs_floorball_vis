@@ -36,6 +36,12 @@ class GoalkeeperStats {
 
             goalkeeperRadialChart.setData(this.app.currentGameData, allGamesData, selectedGK, selectedTypes);
         }
+
+        if (typeof goalkeeperQuadrant !== 'undefined') {
+            const gkSelect = document.getElementById('goalkeeper-select');
+            const selectedGK = gkSelect ? gkSelect.value : null;
+            goalkeeperQuadrant.setData(this.app.currentGameData, selectedGK);
+        }
     }
 }
 
