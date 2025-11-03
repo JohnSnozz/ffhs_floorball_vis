@@ -20,6 +20,7 @@ class FloorballApp {
         console.log('FloorballApp constructor called');
         debugLog('FloorballApp constructor called');
         this.dbManager = new DatabaseManager();
+        this.dashboardSidebar = null;
         this.currentData = null;
         this.currentGameData = null; // Store current game shots for filtering
         this.initializeApp().catch(error => {
@@ -40,6 +41,9 @@ class FloorballApp {
             this.setupEventListeners();
             console.log('Event listeners set up');
             await debugLog('Event listeners set up');
+
+            this.dashboardSidebar = new DashboardSidebar(this);
+            console.log('Dashboard sidebar initialized');
 
             this.setupTabs();
             console.log('Tabs set up');
@@ -77,7 +81,7 @@ class FloorballApp {
 
     setupEventListeners() {
         console.log('Setting up event listeners...');
-        
+
         // File upload
         const csvFileInput = document.getElementById('csv-file');
         if (csvFileInput) {
@@ -102,43 +106,6 @@ class FloorballApp {
             console.error('Import button not found');
         }
 
-        // Game selector
-        const gameSelector = document.getElementById('selected-game');
-        if (gameSelector) {
-            console.log('Game selector found, adding event listener');
-            gameSelector.addEventListener('change', (e) => {
-                console.log('Game selection changed:', e.target.value);
-                this.loadGameData(e.target.value);
-            });
-        } else {
-            console.error('Game selector not found');
-        }
-
-
-        // Toggle controls for visualization layers
-        const toggleShotDots = document.getElementById('toggle-shot-dots');
-        if (toggleShotDots) {
-            toggleShotDots.addEventListener('click', () => {
-                toggleShotDots.classList.toggle('active');
-                const isActive = toggleShotDots.classList.contains('active');
-                console.log('Toggle shot dots:', isActive);
-                this.toggleShotDots(isActive);
-            });
-        }
-
-        const toggleHeatmap = document.getElementById('toggle-heatmap');
-        if (toggleHeatmap) {
-            toggleHeatmap.addEventListener('click', () => {
-                toggleHeatmap.classList.toggle('active');
-                const isActive = toggleHeatmap.classList.contains('active');
-                console.log('Toggle heatmap:', isActive);
-                this.toggleHeatmap(isActive);
-            });
-        }
-
-        // Setup filter toggle buttons
-        this.setupFilterToggleButtons();
-
         // Corrections game selector
         const correctionsGameSelect = document.getElementById('corrections-game-select');
         if (correctionsGameSelect) {
@@ -153,48 +120,6 @@ class FloorballApp {
         if (saveAliasBtn) {
             saveAliasBtn.addEventListener('click', () => {
                 this.saveGameAlias();
-            });
-        }
-    }
-
-    setupFilterToggleButtons() {
-        // Setup all toggle buttons (result and type filters)
-        const allButtons = document.querySelectorAll('.toggle-button-grid .toggle-button');
-        allButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                button.classList.toggle('active');
-                this.applyFilters();
-            });
-        });
-
-        // Setup shooter select dropdown
-        const shooterSelect = document.getElementById('filter-shooter');
-        if (shooterSelect) {
-            shooterSelect.addEventListener('change', () => {
-                this.applyFilters();
-            });
-        }
-
-        // Setup shooter search filter
-        const shooterSearch = document.getElementById('shooter-search');
-        if (shooterSearch) {
-            shooterSearch.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                const options = shooterSelect.querySelectorAll('option');
-
-                options.forEach(option => {
-                    if (option.value === '') {
-                        option.style.display = '';
-                        return;
-                    }
-
-                    const playerName = option.textContent.toLowerCase();
-                    if (playerName.includes(searchTerm)) {
-                        option.style.display = '';
-                    } else {
-                        option.style.display = 'none';
-                    }
-                });
             });
         }
     }
@@ -833,10 +758,10 @@ class FloorballApp {
                 console.log('Sample shot data:', data[0]);
                 this.currentGameData = data;
                 this.currentGameId = gameId;
-                this.populateFilters(data);
+                this.dashboardSidebar.populateFilters(data);
                 this.updateGoalkeeperHistogram();
                 // Apply current filters instead of directly creating charts with unfiltered data
-                this.applyFilters();
+                this.dashboardSidebar.applyFilters();
             } else {
                 console.log('No shots found for this game');
                 this.currentGameData = null;
@@ -847,35 +772,6 @@ class FloorballApp {
             console.error('Error loading game data:', error);
             this.showStatus(`Error loading game data: ${error.message}`, 'error');
         }
-    }
-
-    populateFilters(data) {
-        // Get unique shooters
-        const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))];
-
-        // Sort by jersey number (extract number after #)
-        shooters.sort((a, b) => {
-            const numA = parseInt(a.match(/#(\d+)/)?.[1] || '999');
-            const numB = parseInt(b.match(/#(\d+)/)?.[1] || '999');
-            return numA - numB;
-        });
-
-        const shooterSelect = document.getElementById('filter-shooter');
-
-        // Save current selection before rebuilding dropdown
-        const previouslySelected = Array.from(shooterSelect.selectedOptions).map(opt => opt.value);
-
-        shooterSelect.innerHTML = '<option value="">All Shooters</option>';
-        shooters.forEach(shooter => {
-            const option = document.createElement('option');
-            option.value = shooter;
-            option.textContent = shooter;
-            // Restore selection if this shooter was previously selected and still exists in new data
-            if (previouslySelected.includes(shooter)) {
-                option.selected = true;
-            }
-            shooterSelect.appendChild(option);
-        });
     }
 
     updateGoalkeeperHistogram() {
@@ -902,95 +798,6 @@ class FloorballApp {
 
         goalkeeperHistogram.setData(this.currentGameData, allGamesData);
     }
-
-    applyFilters() {
-        if (!this.currentGameData) {
-            return;
-        }
-
-        const shooterSelect = document.getElementById('filter-shooter');
-
-        // Get selected values from toggle buttons
-        const selectedResults = Array.from(document.querySelectorAll('.result-filter.active'))
-            .map(btn => btn.getAttribute('data-value'));
-
-        const selectedTypes = Array.from(document.querySelectorAll('.type-filter.active'))
-            .map(btn => btn.getAttribute('data-value'));
-
-        const selectedShooters = Array.from(shooterSelect.selectedOptions)
-            .map(opt => opt.value)
-            .filter(v => v !== '');
-
-        // Store selected shooter for special histogram/map handling
-        this.selectedShooter = selectedShooters.length === 1 ? selectedShooters[0] : null;
-
-        // First, apply filters WITHOUT shooter filter for team background data
-        let teamFilteredData = this.currentGameData;
-
-        // Apply result filter to team data
-        if (selectedResults.length > 0) {
-            teamFilteredData = teamFilteredData.filter(d => selectedResults.includes(d.result));
-        }
-
-        // Apply type filter to team data
-        if (selectedTypes.length > 0) {
-            const isTurnoverActive = selectedTypes.includes('Turnover');
-            const isDirectActive = selectedTypes.includes('Direct');
-            const isOneTimerActive = selectedTypes.includes('One-timer');
-            const isReboundActive = selectedTypes.includes('Rebound');
-
-            const allowedTypes = [];
-
-            // If only Turnover is selected, show all turnover shots
-            if (isTurnoverActive && !isDirectActive && !isOneTimerActive && !isReboundActive) {
-                allowedTypes.push('Turnover | Direct');
-                allowedTypes.push('Turnover | One-timer');
-            }
-
-            if (isDirectActive) {
-                allowedTypes.push('Direct');
-                if (isTurnoverActive) {
-                    allowedTypes.push('Turnover | Direct');
-                }
-            }
-
-            if (isOneTimerActive) {
-                allowedTypes.push('One-timer');
-                if (isTurnoverActive) {
-                    allowedTypes.push('Turnover | One-timer');
-                }
-            }
-
-            if (isReboundActive) {
-                allowedTypes.push('Rebound');
-            }
-
-            if (allowedTypes.length > 0) {
-                teamFilteredData = teamFilteredData.filter(d => allowedTypes.includes(d.type));
-            }
-        }
-
-        // Store the filtered team data for histogram background
-        this.currentTeamFilteredData = teamFilteredData;
-
-        // Now apply shooter filter for the main display
-        let filteredData = teamFilteredData;
-        if (selectedShooters.length > 0) {
-            filteredData = filteredData.filter(d => selectedShooters.includes(d.shooter));
-        }
-
-        console.log(`Filtered data: ${filteredData.length} of ${this.currentGameData.length} shots`);
-        this.createCharts(filteredData);
-
-        // Update histogram overlays if player is selected
-        if (selectedShooters.length === 1) {
-            this.updateXGHistogramsWithPlayer(selectedShooters[0]);
-        } else {
-            // Clear player overlay if multiple or no shooters selected
-            this.clearPlayerOverlay();
-        }
-    }
-
 
     async createCharts(data) {
         console.log('=== createCharts called ===');
