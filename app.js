@@ -53,6 +53,9 @@ class FloorballApp {
             this.xgScatter = new XGScatterPlot(this);
             console.log('xG Scatter plot initialized');
 
+            this.playerMetrics = new PlayerMetrics(this);
+            console.log('Player metrics initialized');
+
             this.goalkeeperStats = new GoalkeeperStats(this);
             console.log('Goalkeeper stats initialized');
 

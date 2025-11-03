@@ -236,6 +236,10 @@ class DashboardSidebar {
             );
             this.app.xgScatter.createScatterPlot(this.app.currentGameData);
         }
+
+        if (this.app.playerMetrics) {
+            this.app.playerMetrics.setData(this.app.currentGameData, this.app.selectedShooter);
+        }
     }
 }
 
