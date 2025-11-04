@@ -5,6 +5,8 @@ class ShotMap {
         this.shotMapG = null;
         this.dotsLayer = null;
         this.heatmapLayer = null;
+        this.showDots = false;
+        this.showHeatmap = true;
     }
 
     async createShotMap(data, onFieldData = null) {
@@ -292,9 +294,10 @@ class ShotMap {
 
         const dotsGroup = g.append('g')
             .attr('class', 'dots-layer')
-            .style('display', 'none');
+            .style('display', this.showDots ? 'block' : 'none');
         this.dotsLayer = dotsGroup;
         this.heatmapLayer = heatmapGroup;
+        heatmapGroup.style('display', this.showHeatmap ? 'block' : 'none');
 
         const colorScale = d3.scaleOrdinal()
             .domain(['Goal', 'Saved', 'Missed', 'Blocked'])
@@ -375,7 +378,10 @@ class ShotMap {
         this.addSimpleShotMapLegend(svg, fieldWidth, fieldHeight, margin, colorScale);
         this.addHeatmapLegend(svg, fieldWidth, fieldHeight, margin);
 
-        svg.select('.shot-map-legend').style('display', 'none');
+        this.dotsLayer.style('display', this.showDots ? 'block' : 'none');
+        this.heatmapLayer.style('display', this.showHeatmap ? 'block' : 'none');
+        svg.select('.shot-map-legend').style('display', this.showDots ? 'block' : 'none');
+        svg.select('.heatmap-legend').style('display', this.showHeatmap ? 'block' : 'none');
 
         this.app.shotHistogram.createXGHistograms(filteredData, fieldWidth, fieldHeight, margin);
 
@@ -1772,6 +1778,7 @@ class ShotMap {
     }
 
     toggleShotDots(show) {
+        this.showDots = show;
         if (this.dotsLayer) {
             this.dotsLayer.style('display', show ? 'block' : 'none');
         }
@@ -1781,6 +1788,7 @@ class ShotMap {
     }
 
     toggleHeatmap(show) {
+        this.showHeatmap = show;
         if (this.heatmapLayer) {
             this.heatmapLayer.style('display', show ? 'block' : 'none');
         }

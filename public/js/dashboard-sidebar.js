@@ -90,6 +90,27 @@ class DashboardSidebar {
         }
     }
 
+    syncVisualizationButtonStates() {
+        const toggleShotDots = document.getElementById('toggle-shot-dots');
+        const toggleHeatmap = document.getElementById('toggle-heatmap');
+
+        if (toggleShotDots && this.app.shotMap) {
+            if (this.app.shotMap.showDots) {
+                toggleShotDots.classList.add('active');
+            } else {
+                toggleShotDots.classList.remove('active');
+            }
+        }
+
+        if (toggleHeatmap && this.app.shotMap) {
+            if (this.app.shotMap.showHeatmap) {
+                toggleHeatmap.classList.add('active');
+            } else {
+                toggleHeatmap.classList.remove('active');
+            }
+        }
+    }
+
     cycleTurnoverState(button) {
         if (this.turnoverState === 'off') {
             this.turnoverState = 'only';
@@ -225,6 +246,8 @@ class DashboardSidebar {
         } else {
             this.app.createCharts(filteredData);
         }
+
+        this.syncVisualizationButtonStates();
 
         this.app.goalkeeperStats.updateGoalkeeperHistogram();
 

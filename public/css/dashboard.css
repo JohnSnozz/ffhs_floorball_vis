@@ -31,18 +31,25 @@
 .hamburger-btn {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 6px;
+    padding: 8px;
+    border-radius: 4px;
     z-index: 1001;
+    transition: background-color 0.2s ease;
+}
+
+.hamburger-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .hamburger-btn span {
-    width: 20px;
-    height: 2px;
+    width: 22px;
+    height: 2.5px;
     background-color: #A0A0A8;
+    border-radius: 2px;
     transition: all 0.3s ease;
 }
 
@@ -54,7 +61,7 @@
     display: none;
     position: absolute;
     top: 100%;
-    left: 0;
+    right: 0;
     background-color: #2E2E33;
     border: 1px solid #3D3D42;
     border-radius: 6px;
