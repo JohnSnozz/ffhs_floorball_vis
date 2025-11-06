@@ -100,11 +100,6 @@ class PlayerMetrics {
 
         const plusMinus = goalsFor - goalsAgainst;
 
-        const shotAttempts = totalShots + blocked;
-        const goalsPerShotAttempt = shotAttempts > 0 ? goals / shotAttempts : 0;
-
-        const xgPerShotAttempt = shotAttempts > 0 ? totalXG / shotAttempts : 0;
-
         const shootingEfficiency = totalShots > 0 ? (goals - totalXG) / totalShots : 0;
 
         return {
@@ -127,8 +122,6 @@ class PlayerMetrics {
             fenwick,
             shotQuality,
             plusMinus,
-            goalsPerShotAttempt,
-            xgPerShotAttempt,
             shootingEfficiency
         };
     }
@@ -160,8 +153,6 @@ class PlayerMetrics {
             totalShots: d3.mean(playerMetrics, m => m.totalShots),
             shotQuality: d3.mean(playerMetrics, m => m.shotQuality),
             plusMinus: d3.mean(playerMetrics, m => m.plusMinus),
-            goalsPerShotAttempt: d3.mean(playerMetrics, m => m.goalsPerShotAttempt),
-            xgPerShotAttempt: d3.mean(playerMetrics, m => m.xgPerShotAttempt),
             shootingEfficiency: d3.mean(playerMetrics, m => m.shootingEfficiency)
         };
     }
@@ -261,8 +252,6 @@ class PlayerMetrics {
             { key: 'shootingEfficiency', label: 'Shooting Efficiency', format: d => d > 0 ? '+' + d.toFixed(3) : d.toFixed(3), higherIsBetter: true },
             { key: 'shotsOnGoalPct', label: 'Shots on Goal %', format: d => d.toFixed(1) + '%', higherIsBetter: true },
             { key: 'totalShots', label: 'Shot Volume', format: d => Math.round(d), higherIsBetter: true },
-            { key: 'goalsPerShotAttempt', label: 'Goals/Shot Attempt', format: d => d.toFixed(3), higherIsBetter: true },
-            { key: 'xgPerShotAttempt', label: 'xG/Shot Attempt', format: d => d.toFixed(3), higherIsBetter: true },
             { key: 'assistXG', label: 'Avg Assist xG', format: d => d.toFixed(3), higherIsBetter: true },
             { key: 'avgDistance', label: 'Avg Distance', format: d => d.toFixed(1) + 'm', higherIsBetter: false },
             { key: 'corsi', label: 'Corsi +/-', format: d => d > 0 ? '+' + Math.round(d) : Math.round(d), higherIsBetter: true },
@@ -417,6 +406,158 @@ class PlayerMetrics {
             .style('font-size', '10px')
             .style('fill', '#A0A0A8')
             .text('better');
+
+        this.addInfoButton(svg, containerRect.width, height + margin.top + margin.bottom);
+    }
+
+    addInfoButton(svg, svgWidth, svgHeight) {
+        const buttonSize = 10;
+        const margin = 10;
+        const buttonX = svgWidth - buttonSize - margin;
+        const buttonY = svgHeight - buttonSize - 5;
+
+        const buttonGroup = svg.append('g')
+            .attr('class', 'info-button')
+            .attr('transform', `translate(${buttonX}, ${buttonY})`)
+            .style('cursor', 'pointer');
+
+        buttonGroup.append('circle')
+            .attr('cx', buttonSize / 2)
+            .attr('cy', buttonSize / 2)
+            .attr('r', buttonSize / 2)
+            .style('fill', '#3D3D42')
+            .style('stroke', '#A0A0A8')
+            .style('stroke-width', 1.5)
+            .style('transition', 'all 0.2s ease');
+
+        buttonGroup.append('text')
+            .attr('x', buttonSize / 2)
+            .attr('y', buttonSize / 2)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .style('font-size', '8px')
+            .style('font-weight', 'bold')
+            .style('fill', '#A0A0A8')
+            .style('pointer-events', 'none')
+            .text('i');
+
+        buttonGroup.on('mouseover', function() {
+            d3.select(this).select('circle')
+                .style('fill', '#4A4A50')
+                .style('stroke', '#00D9FF');
+            d3.select(this).select('text')
+                .style('fill', '#00D9FF');
+        });
+
+        buttonGroup.on('mouseout', function() {
+            d3.select(this).select('circle')
+                .style('fill', '#3D3D42')
+                .style('stroke', '#A0A0A8');
+            d3.select(this).select('text')
+                .style('fill', '#A0A0A8');
+        });
+
+        buttonGroup.on('click', (event) => {
+            event.stopPropagation();
+            this.showInfoModal();
+        });
+    }
+
+    showInfoModal() {
+        let modal = d3.select('body').select('.metrics-info-modal');
+        if (!modal.empty()) {
+            modal.remove();
+            return;
+        }
+
+        modal = d3.select('body').append('div')
+            .attr('class', 'metrics-info-modal')
+            .style('position', 'fixed')
+            .style('top', '50%')
+            .style('left', '50%')
+            .style('transform', 'translate(-50%, -50%)')
+            .style('background', '#2E2E33')
+            .style('border', '2px solid #3D3D42')
+            .style('border-radius', '8px')
+            .style('padding', '24px')
+            .style('max-width', '600px')
+            .style('max-height', '80vh')
+            .style('overflow-y', 'auto')
+            .style('z-index', '10000')
+            .style('box-shadow', '0 8px 32px rgba(0, 0, 0, 0.5)');
+
+        modal.append('h3')
+            .style('margin', '0 0 16px 0')
+            .style('font-size', '18px')
+            .style('color', '#E5E5E7')
+            .style('border-bottom', '1px solid #3D3D42')
+            .style('padding-bottom', '8px')
+            .text('Metric Calculations');
+
+        const metricsInfo = [
+            { name: 'Points', formula: 'Goals + Assists' },
+            { name: 'Goals', formula: 'Goals scored by player' },
+            { name: 'Assists', formula: 'Goals where player was passer' },
+            { name: '+/-', formula: 'Goals For - Goals Against (while on field)' },
+            { name: 'Avg xG/Shot', formula: 'Avg expected goals per shot' },
+            { name: 'Shot Quality', formula: 'Avg xG of shots on goal' },
+            { name: 'Conversion %', formula: '(Goals / Total Shots) × 100' },
+            { name: 'Goals Above xG', formula: 'Actual Goals - xG' },
+            { name: 'Shooting Efficiency', formula: '(Goals - xG) / Total Shots' },
+            { name: 'Shots on Goal %', formula: '((Goals + Saved) / Total Shots) × 100' },
+            { name: 'Shot Volume', formula: 'Total shots taken' },
+            { name: 'Avg Assist xG', formula: 'Avg xG of assists' },
+            { name: 'Avg Distance', formula: 'Avg shot distance (meters)' },
+            { name: 'Corsi +/-', formula: 'Shot attempts for - against (on field)' },
+            { name: 'Fenwick +/-', formula: 'Unblocked attempts for - against (on field)' },
+            { name: 'Blocked %', formula: '(Blocked / Total Shots) × 100' },
+            { name: 'Missed %', formula: '(Missed / Total Shots) × 100' },
+            { name: 'Saved %', formula: '(Saved / Total Shots) × 100' },
+            { name: 'Goal %', formula: '(Goals / Total Shots) × 100' }
+        ];
+
+        const list = modal.append('div')
+            .style('display', 'grid')
+            .style('gap', '6px');
+
+        metricsInfo.forEach(metric => {
+            const item = list.append('div')
+                .style('padding', '6px 8px')
+                .style('background', '#1A1A1D')
+                .style('border-radius', '3px')
+                .style('border-left', '2px solid #00D9FF');
+
+            item.append('div')
+                .style('font-weight', '600')
+                .style('font-size', '12px')
+                .style('color', '#E5E5E7')
+                .style('margin-bottom', '2px')
+                .text(metric.name);
+
+            item.append('div')
+                .style('font-size', '11px')
+                .style('color', '#A0A0A8')
+                .style('font-family', 'monospace')
+                .text(metric.formula);
+        });
+
+        modal.append('div')
+            .style('margin-top', '20px')
+            .style('padding-top', '16px')
+            .style('border-top', '1px solid #3D3D42')
+            .style('font-size', '11px')
+            .style('color', '#A0A0A8')
+            .style('text-align', 'center')
+            .text('Click anywhere to close');
+
+        d3.select('body').on('click.modal', () => {
+            modal.remove();
+            d3.select('body').on('click.modal', null);
+        });
+
+        modal.on('click', (event) => {
+            event.stopPropagation();
+        });
     }
 }
 
