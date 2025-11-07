@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floorball Statistics Dashboard</title>
+
+    <!-- Base stylesheets -->
+    <link rel="stylesheet" href="public/css/base.css">
+    <link rel="stylesheet" href="public/css/dashboard.css">
+    <link rel="stylesheet" href="public/css/visualizations.css">
+    <link rel="stylesheet" href="public/css/goalkeeper.css">
+    <link rel="stylesheet" href="public/css/import.css">
+    <link rel="stylesheet" href="public/css/corrections.css">
+    <link rel="stylesheet" href="public/css/dev-tools.css">
+
+    <!-- Auth header styles -->
+    <style>
+        .auth-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: white;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .auth-header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .auth-header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .auth-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            padding: 6px 14px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
+
+        /* Adjust main container for auth header */
+        .container {
+            margin-top: 50px;
+        }
+
+        /* Hide elements based on user type */
+        body.viewer-mode #import-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode #corrections-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="import"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="corrections"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .hamburger-menu {
+            display: none !important;
+        }
+
+        body.viewer-mode .csv-import-section {
+            display: none !important;
+        }
+
+        body.viewer-mode .corrections-section {
+            display: none !important;
+        }
+
+        /* Admin-only indicator */
+        .admin-only-badge {
+            display: inline-block;
+            background: #4a9d9c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        body.viewer-mode .admin-only-badge {
+            display: none !important;
+        }
+
+        /* Access restricted message for viewers */
+        .access-restricted {
+            display: none;
+            padding: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            color: #856404;
+            margin: 20px;
+        }
+
+        body.viewer-mode.game-restricted .access-restricted {
+            display: block;
+        }
+    </style>
+
+    <!-- External libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body>
+    <!-- Authentication Header -->
+    <div class="auth-header">
+        <div class="auth-header-left">
+            <div class="auth-header-title">
+                Floorball Dashboard
+                <span class="admin-only-badge" id="adminBadge" style="display:none;">ADMIN</span>
+            </div>
+        </div>
+        <div class="auth-header-right">
+            <span class="user-info" id="userInfo"></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div class="container">
+        <header class="hidden">
+        </header>
+
+        <main>
+            <!-- Import Tab (Admin Only) -->
+            <div id="import-tab" class="tab-content">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Import Data</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid-import" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn-import">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu-import">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                </div>
+                            </div>
+                            <div class="logo-placeholder">
+                                <svg width="35" height="35" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#4a9d9c;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.2" />
+                                        </linearGradient>
+                                    </defs>
+                                    <polygon points="45,15 65,27.5 65,52.5 45,65 25,52.5 25,27.5"
+                                             fill="url(#grad2)"
+                                             stroke="#4a9d9c"
+                                             stroke-width="1.5"
+                                             opacity="0.6"/>
+                                    <text x="45" y="47"
+                                          font-family="'Courier New', monospace"
+                                          font-size="20"
+                                          font-weight="700"
+                                          fill="#4a9d9c"
+                                          text-anchor="middle"
+                                          letter-spacing="1"
+                                          dominant-baseline="middle">SNZ</text>
+                                    <circle cx="35" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                    <circle cx="45" cy="70" r="2.5" fill="#5cb8b7" opacity="0.7"/>
+                                    <circle cx="55" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="import-content">
+                        <div class="game-info">
+                            <div class="form-group">
+                                <label for="game-name">Game Name:</label>
+                                <input type="text" id="game-name" placeholder="e.g., Kloten vs Fribourg">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="game-date">Game Date:</label>
+                                <input type="date" id="game-date">
+                            </div>
+                        </div>
+
+                        <div class="file-upload-area">
+                            <div class="upload-icon">📁</div>
+                            <p>Drag and drop CSV file here or click to browse</p>
+                            <input type="file" id="file-input" accept=".csv" hidden>
+                            <button id="browse-btn">Browse Files</button>
+                        </div>
+
+                        <div id="file-info" class="file-info" style="display: none;">
+                            <h3>File Information</h3>
+                            <p>Name: <span id="file-name"></span></p>
+                            <p>Size: <span id="file-size"></span></p>
+                            <p>Rows: <span id="file-rows"></span></p>
+                        </div>
+
+                        <div id="duplicate-warning" class="duplicate-warning" style="display: none;">
+                            <h3>⚠️ Potential Duplicate Detected</h3>
+                            <p id="duplicate-message"></p>
+                            <div class="duplicate-actions">
+                                <button id="continue-import">Continue Anyway</button>
+                                <button id="cancel-import">Cancel Import</button>
+                            </div>
+                        </div>
+
+                        <button id="import-btn" class="import-btn" style="display: none;">Import to Database</button>
+
+                        <div id="import-status" class="import-status"></div>
+
+                        <div class="existing-games">
+                            <h3>Existing Games in Database</h3>
+                            <div id="games-list" class="games-list"></div>
+                        </div>
+
+                        <div class="database-actions">
+                            <button id="save-db-btn">Save Database</button>
+                            <button id="download-db-btn">Download Database</button>
+                            <button id="load-db-btn">Load Database File</button>
+                            <input type="file" id="db-file-input" accept=".sqlite" hidden>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Statistics Dashboard</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                </div>
+                            </div>
+                            <div class="logo-placeholder">
+                                <svg width="35" height="35" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#4a9d9c;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.2" />
+                                        </linearGradient>
+                                    </defs>
+                                    <polygon points="45,15 65,27.5 65,52.5 45,65 25,52.5 25,27.5"
+                                             fill="url(#grad1)"
+                                             stroke="#4a9d9c"
+                                             stroke-width="1.5"
+                                             opacity="0.6"/>
+                                    <text x="45" y="47"
+                                          font-family="'Courier New', monospace"
+                                          font-size="20"
+                                          font-weight="700"
+                                          fill="#4a9d9c"
+                                          text-anchor="middle"
+                                          letter-spacing="1"
+                                          dominant-baseline="middle">SNZ</text>
+                                    <circle cx="35" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                    <circle cx="45" cy="70" r="2.5" fill="#5cb8b7" opacity="0.7"/>
+                                    <circle cx="55" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Access Restricted Message (shown for viewers with game restrictions) -->
+                    <div class="access-restricted" style="display:none;">
+                        <strong>Access Restricted:</strong> You only have access to specific game data.
+                    </div>
+
+                    <div class="dashboard-content">
+                        <div class="dashboard-sidebar" id="dashboardSidebar"></div>
+
+                        <div class="visualization-grid">
+                            <div class="visualization shot-map">
+                                <div class="viz-header">
+                                    <h3>Shot Map</h3>
+                                </div>
+                                <div id="shot-map"></div>
+                            </div>
+
+                            <div class="visualization shot-distribution">
+                                <div class="viz-header">
+                                    <h3>xG Histogram</h3>
+                                </div>
+                                <div id="shot-histogram"></div>
+                            </div>
+
+                            <div class="visualization player-performance">
+                                <div class="viz-header">
+                                    <h3>Player Performance</h3>
+                                </div>
+                                <div id="performance-spider"></div>
+                            </div>
+
+                            <div class="visualization xg-scatter">
+                                <div class="viz-header">
+                                    <h3>xG vs xGOT Scatter</h3>
+                                </div>
+                                <div id="xg-scatter"></div>
+                            </div>
+
+                            <div class="visualization player-metrics">
+                                <div class="viz-header">
+                                    <h3>Player Metrics</h3>
+                                </div>
+                                <div id="player-metrics"></div>
+                            </div>
+
+                            <div class="visualization gk-histogram">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Save Distribution</h3>
+                                </div>
+                                <div id="gk-histogram"></div>
+                            </div>
+
+                            <div class="visualization gk-stats">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Statistics</h3>
+                                </div>
+                                <div id="gk-stats"></div>
+                            </div>
+
+                            <div class="visualization gk-radial">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Radial</h3>
+                                </div>
+                                <div id="gk-radial"></div>
+                            </div>
+
+                            <div class="visualization gk-quadrant">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Quadrant</h3>
+                                </div>
+                                <div id="gk-quadrant"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corrections Tab (Admin Only) -->
+            <div id="corrections-tab" class="tab-content">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Data Corrections</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid-corrections" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn-corrections">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu-corrections">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                </div>
+                            </div>
+                            <div class="logo-placeholder">
+                                <svg width="35" height="35" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#4a9d9c;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.2" />
+                                        </linearGradient>
+                                    </defs>
+                                    <polygon points="45,15 65,27.5 65,52.5 45,65 25,52.5 25,27.5"
+                                             fill="url(#grad3)"
+                                             stroke="#4a9d9c"
+                                             stroke-width="1.5"
+                                             opacity="0.6"/>
+                                    <text x="45" y="47"
+                                          font-family="'Courier New', monospace"
+                                          font-size="20"
+                                          font-weight="700"
+                                          fill="#4a9d9c"
+                                          text-anchor="middle"
+                                          letter-spacing="1"
+                                          dominant-baseline="middle">SNZ</text>
+                                    <circle cx="35" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                    <circle cx="45" cy="70" r="2.5" fill="#5cb8b7" opacity="0.7"/>
+                                    <circle cx="55" cy="68" r="2" fill="#4a9d9c" opacity="0.7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="corrections-content">
+                        <div class="corrections-controls">
+                            <select id="game-select-corrections">
+                                <option value="">Select a game</option>
+                            </select>
+                            <button id="load-corrections-btn">Load Shots</button>
+                        </div>
+
+                        <div id="corrections-table-container"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dev Grid Overlay -->
+    <div id="dev-grid" class="dev-grid"></div>
+
+    <!-- Dashboard Scripts -->
+    <script src="public/js/modules/auth-integration.js"></script>
+    <script src="public/js/database.js"></script>
+    <script src="public/js/dashboard-sidebar.js"></script>
+    <script src="public/js/shothistogram.js"></script>
+    <script src="public/js/performancespider.js"></script>
+    <script src="public/js/goalkeeperstats.js"></script>
+    <script src="public/js/shotmap.js"></script>
+    <script src="public/js/corrections.js"></script>
+    <script src="public/js/csvimport.js"></script>
+    <script src="public/js/dev-grid.js"></script>
+    <script src="public/js/gkhistogram.js"></script>
+    <script src="public/js/gkradial.js"></script>
+    <script src="public/js/gkquadrant.js"></script>
+    <script src="public/js/xgscatter.js"></script>
+    <script src="public/js/playermetrics.js"></script>
+    <script src="app.js"></script>
+
+    <!-- Authentication Script -->
+    <script>
+        let authToken = null;
+        let userType = null;
+        let accessType = null;
+        let restrictedGameId = null;
+
+        // Initialize authentication on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication
+            authToken = localStorage.getItem('auth_token');
+            userType = localStorage.getItem('user_type');
+            accessType = localStorage.getItem('access_type');
+            restrictedGameId = localStorage.getItem('game_id');
+
+            if (!authToken) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Verify token with server
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    logout();
+                    return;
+                }
+
+                const data = await response.json();
+                if (!data.valid) {
+                    logout();
+                    return;
+                }
+
+                // Setup UI based on user type
+                setupUserInterface();
+
+                // Initialize the dashboard app
+                // The app.js will handle the rest
+                if (window.floorballApp) {
+                    // Pass auth info to the app if needed
+                    window.floorballApp.authInfo = {
+                        userType,
+                        accessType,
+                        restrictedGameId,
+                        token: authToken
+                    };
+                }
+
+            } catch (error) {
+                console.error('Auth verification error:', error);
+                logout();
+            }
+        });
+
+        function setupUserInterface() {
+            const userInfo = document.getElementById('userInfo');
+            const adminBadge = document.getElementById('adminBadge');
+
+            if (userType === 'admin') {
+                // Admin user
+                document.body.classList.remove('viewer-mode');
+                userInfo.textContent = `Admin: ${localStorage.getItem('username') || 'Administrator'}`;
+                adminBadge.style.display = 'inline-block';
+
+                // Show all tabs
+                document.getElementById('import-tab').style.display = '';
+                document.getElementById('corrections-tab').style.display = '';
+
+            } else {
+                // Viewer user
+                document.body.classList.add('viewer-mode');
+
+                if (accessType === 'season') {
+                    userInfo.textContent = 'Full Season Access';
+                } else if (accessType === 'game' && restrictedGameId) {
+                    userInfo.textContent = 'Single Game Access';
+                    document.body.classList.add('game-restricted');
+                }
+
+                // Hide admin-only tabs
+                document.getElementById('import-tab').style.display = 'none';
+                document.getElementById('corrections-tab').style.display = 'none';
+
+                // Switch to dashboard tab
+                showTab('dashboard');
+            }
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(`${tabName}-tab`);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Update active button state
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        // Override the save database function to include auth
+        if (window.saveDatabase) {
+            const originalSaveDatabase = window.saveDatabase;
+            window.saveDatabase = async function() {
+                if (userType !== 'admin') {
+                    alert('Only administrators can save the database');
+                    return;
+                }
+
+                // Add auth header to the original function
+                // This might need adjustment based on how the original function works
+                return originalSaveDatabase.call(this);
+            };
+        }
+    </script>
+</body>
+</html>

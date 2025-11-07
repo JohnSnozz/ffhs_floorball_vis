@@ -1,0 +1,33 @@
+/* File upload component styles */
+.upload-section {
+    border: 3px dashed #ddd;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 30px;
+    transition: border-color 0.3s;
+}
+
+.upload-section.dragover {
+    border-color: #007bff;
+    background-color: #f0f8ff;
+}
+
+.upload-section input[type="file"] {
+    display: none;
+}
+
+.upload-btn {
+    background: #007bff;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px;
+}
+
+.upload-btn:hover {
+    background: #0056b3;
+}

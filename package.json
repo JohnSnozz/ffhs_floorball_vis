@@ -22,5 +22,9 @@
   "license": "MIT",
   "devDependencies": {
     "bun": "^1.0.0"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }

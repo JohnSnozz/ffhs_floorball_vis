@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floorball Statistics Dashboard</title>
+
+    <!-- Base stylesheets -->
+    <link rel="stylesheet" href="public/css/base.css">
+    <link rel="stylesheet" href="public/css/dashboard.css">
+    <link rel="stylesheet" href="public/css/visualizations.css">
+    <link rel="stylesheet" href="public/css/goalkeeper.css">
+    <link rel="stylesheet" href="public/css/import.css">
+    <link rel="stylesheet" href="public/css/corrections.css">
+    <link rel="stylesheet" href="public/css/dev-tools.css">
+
+    <!-- Auth header styles -->
+    <style>
+        .auth-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: white;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .auth-header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .auth-header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .auth-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            padding: 6px 14px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
+
+        /* Adjust main container for auth header */
+        .container {
+            margin-top: 50px;
+        }
+
+        /* Hide elements based on user type */
+        body.viewer-mode #import-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode #corrections-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="import"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="corrections"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .hamburger-menu {
+            display: none !important;
+        }
+
+        /* Admin-only indicator */
+        .admin-only-badge {
+            display: inline-block;
+            background: #4a9d9c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        body.viewer-mode .admin-only-badge {
+            display: none !important;
+        }
+
+        /* Loading indicator */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Simple dashboard message for initial load */
+        .welcome-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+
+    <!-- External libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Authentication Header -->
+    <div class="auth-header">
+        <div class="auth-header-left">
+            <div class="auth-header-title">
+                Floorball Dashboard
+                <span class="admin-only-badge" id="adminBadge" style="display:none;">ADMIN</span>
+            </div>
+        </div>
+        <div class="auth-header-right">
+            <span class="user-info" id="userInfo"></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div class="container">
+        <main>
+            <!-- Simple Welcome Message -->
+            <div id="welcomeContent" class="welcome-message">
+                <h2>Welcome to Floorball Dashboard</h2>
+                <p id="welcomeText">Loading dashboard...</p>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content hidden">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Statistics Dashboard</h2>
+                        <div class="header-controls">
+                            <div class="hamburger-menu admin-only">
+                                <button class="hamburger-btn" id="hamburger-btn">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu">
+                                    <button class="menu-item" onclick="navigateTo('import')">Import Data</button>
+                                    <button class="menu-item" onclick="navigateTo('dashboard')">Dashboard</button>
+                                    <button class="menu-item" onclick="navigateTo('corrections')">Corrections</button>
+                                    <button class="menu-item" onclick="navigateTo('codes')">Access Codes</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-content">
+                        <p>Dashboard visualizations will be loaded here once the app initializes.</p>
+                        <p>For Admin users: Use the hamburger menu to access additional features.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Tab (Admin Only) -->
+            <div id="import-tab" class="tab-content hidden admin-only">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Import Data</h2>
+                    </div>
+                    <div class="import-content">
+                        <p>CSV Import functionality</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corrections Tab (Admin Only) -->
+            <div id="corrections-tab" class="tab-content hidden admin-only">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Data Corrections</h2>
+                    </div>
+                    <div class="corrections-content">
+                        <p>Data corrections interface</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Access Codes Tab (Admin Only) -->
+            <div id="codes-tab" class="tab-content hidden admin-only">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Access Code Management</h2>
+                        <button class="btn btn-primary" onclick="generateNewCode()">Generate New Code</button>
+                    </div>
+                    <div id="codesContent">
+                        <p>Loading access codes...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Authentication Script (Simplified to avoid loops) -->
+    <script>
+        let authToken = null;
+        let userType = null;
+        let accessType = null;
+        let dashboardInitialized = false;
+
+        // Initialize authentication on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('Dashboard loading...');
+
+            // Hide loading overlay after a short delay
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 500);
+
+            // Check authentication
+            authToken = localStorage.getItem('auth_token');
+            userType = localStorage.getItem('user_type');
+            accessType = localStorage.getItem('access_type');
+
+            if (!authToken) {
+                console.log('No token found, redirecting to login');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Verify token with server
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    console.log('Token invalid, redirecting to login');
+                    logout();
+                    return;
+                }
+
+                const data = await response.json();
+                if (!data.valid) {
+                    console.log('Token not valid, redirecting to login');
+                    logout();
+                    return;
+                }
+
+                console.log('Authentication successful:', data);
+
+                // Setup UI based on user type
+                setupUserInterface();
+
+                // Show dashboard
+                showDashboard();
+
+            } catch (error) {
+                console.error('Auth verification error:', error);
+                // Don't redirect on network errors, just show error
+                document.getElementById('welcomeText').textContent = 'Error loading dashboard. Please refresh the page.';
+            }
+        });
+
+        function setupUserInterface() {
+            const userInfo = document.getElementById('userInfo');
+            const adminBadge = document.getElementById('adminBadge');
+            const welcomeText = document.getElementById('welcomeText');
+
+            if (userType === 'admin') {
+                // Admin user
+                document.body.classList.remove('viewer-mode');
+                userInfo.textContent = `Admin: ${localStorage.getItem('username') || 'Administrator'}`;
+                adminBadge.style.display = 'inline-block';
+                welcomeText.textContent = 'Welcome Admin! Loading dashboard features...';
+
+                // Show admin elements
+                document.querySelectorAll('.admin-only').forEach(el => {
+                    el.classList.remove('hidden');
+                });
+
+            } else {
+                // Viewer user
+                document.body.classList.add('viewer-mode');
+
+                if (accessType === 'season') {
+                    userInfo.textContent = 'Full Season Access';
+                    welcomeText.textContent = 'Welcome! You have full season access.';
+                } else if (accessType === 'game') {
+                    userInfo.textContent = 'Single Game Access';
+                    welcomeText.textContent = 'Welcome! You have access to a specific game.';
+                }
+
+                // Hide admin elements
+                document.querySelectorAll('.admin-only').forEach(el => {
+                    el.classList.add('hidden');
+                });
+            }
+        }
+
+        function showDashboard() {
+            // Hide welcome message
+            document.getElementById('welcomeContent').classList.add('hidden');
+
+            // Show dashboard tab
+            document.getElementById('dashboard-tab').classList.remove('hidden');
+
+            // Initialize hamburger menu for admin
+            if (userType === 'admin') {
+                initializeHamburgerMenu();
+            }
+
+            // Try to load the full dashboard app if available
+            loadDashboardApp();
+        }
+
+        function initializeHamburgerMenu() {
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const dropdownMenu = document.getElementById('dropdown-menu');
+
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdownMenu.style.display =
+                        dropdownMenu.style.display === 'block' ? 'none' : 'block';
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', function() {
+                    if (dropdownMenu) {
+                        dropdownMenu.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function navigateTo(section) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(`${section}-tab`);
+            if (selectedTab) {
+                selectedTab.classList.remove('hidden');
+            }
+
+            // Close dropdown
+            const dropdownMenu = document.getElementById('dropdown-menu');
+            if (dropdownMenu) {
+                dropdownMenu.style.display = 'none';
+            }
+
+            // Load content for specific sections
+            if (section === 'codes' && userType === 'admin') {
+                loadAccessCodes();
+            }
+        }
+
+        async function loadAccessCodes() {
+            const codesContent = document.getElementById('codesContent');
+
+            try {
+                const response = await fetch('/api/admin/codes', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const codes = await response.json();
+                    displayAccessCodes(codes);
+                } else {
+                    codesContent.innerHTML = '<p>Error loading access codes</p>';
+                }
+            } catch (error) {
+                console.error('Error loading codes:', error);
+                codesContent.innerHTML = '<p>Error loading access codes</p>';
+            }
+        }
+
+        function displayAccessCodes(codes) {
+            const codesContent = document.getElementById('codesContent');
+
+            if (codes.length === 0) {
+                codesContent.innerHTML = '<p>No access codes found. Generate your first code!</p>';
+                return;
+            }
+
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">';
+
+            codes.forEach(code => {
+                const isActive = code.is_active ? 'Active' : 'Inactive';
+                const cardStyle = code.is_active ? '' : 'opacity: 0.6;';
+
+                html += `
+                    <div style="border: 1px solid #ddd; padding: 20px; border-radius: 8px; ${cardStyle}">
+                        <div style="font-family: monospace; font-size: 24px; color: #667eea; margin-bottom: 10px;">
+                            ${code.code}
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            <p>Type: ${code.type === 'season' ? 'Full Season' : 'Single Game'}</p>
+                            ${code.game_name ? `<p>Game: ${code.game_name}</p>` : ''}
+                            ${code.description ? `<p>Description: ${code.description}</p>` : ''}
+                            <p>Usage: ${code.usage_count} times</p>
+                            <p>Status: ${isActive}</p>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="copyCode('${code.code}')" style="padding: 5px 10px; margin-right: 5px;">Copy</button>
+                            <button onclick="deleteCode(${code.id})" style="padding: 5px 10px; color: red;">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            codesContent.innerHTML = html;
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copied to clipboard!');
+            });
+        }
+
+        async function deleteCode(codeId) {
+            if (!confirm('Are you sure you want to delete this code?')) return;
+
+            try {
+                const response = await fetch(`/api/admin/codes/${codeId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadAccessCodes();
+                }
+            } catch (error) {
+                console.error('Error deleting code:', error);
+            }
+        }
+
+        async function generateNewCode() {
+            const type = prompt('Enter code type (season/game):', 'season');
+            if (!type) return;
+
+            const description = prompt('Enter description (optional):');
+
+            try {
+                const response = await fetch('/api/admin/codes', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        description: description,
+                        game_id: null // You can enhance this to select a game
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`New code generated: ${data.code}`);
+                    loadAccessCodes();
+                }
+            } catch (error) {
+                console.error('Error generating code:', error);
+                alert('Failed to generate code');
+            }
+        }
+
+        function loadDashboardApp() {
+            // Try to load the existing dashboard app after a delay
+            // This prevents conflicts with the existing app initialization
+            setTimeout(() => {
+                const dashboardContent = document.querySelector('.dashboard-content');
+                if (dashboardContent) {
+                    dashboardContent.innerHTML = `
+                        <p>Dashboard is ready!</p>
+                        <p>The full visualization dashboard can be loaded by integrating with app.js</p>
+                        ${userType === 'admin' ? '<p>As an admin, you have access to all features via the hamburger menu.</p>' : ''}
+                    `;
+                }
+            }, 1000);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

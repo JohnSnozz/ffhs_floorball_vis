@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floorball Statistics Dashboard - Full Version</title>
+
+    <!-- All original CSS files -->
+    <link rel="stylesheet" href="public/css/base.css">
+    <link rel="stylesheet" href="public/css/dashboard.css">
+    <link rel="stylesheet" href="public/css/visualizations.css">
+    <link rel="stylesheet" href="public/css/goalkeeper.css">
+    <link rel="stylesheet" href="public/css/import.css">
+    <link rel="stylesheet" href="public/css/corrections.css">
+    <link rel="stylesheet" href="public/css/dev-tools.css">
+
+    <!-- Additional Auth Styles -->
+    <style>
+        /* Authentication Header */
+        .auth-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: white;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .auth-header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .auth-header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .auth-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info-display {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .auth-logout-btn {
+            padding: 6px 14px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .auth-logout-btn:hover {
+            background: #d32f2f;
+        }
+
+        /* Adjust main container for auth header */
+        body.authenticated .container {
+            margin-top: 50px;
+        }
+
+        /* Admin badge */
+        .admin-badge {
+            display: inline-block;
+            background: #4a9d9c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        /* Hide elements for viewers */
+        body.viewer-mode #import-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode #corrections-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="import"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="corrections"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .csv-import-section {
+            display: none !important;
+        }
+
+        body.viewer-mode .corrections-controls {
+            display: none !important;
+        }
+
+        body.viewer-mode .database-actions {
+            display: none !important;
+        }
+
+        body.viewer-mode .import-btn {
+            display: none !important;
+        }
+
+        body.viewer-mode .correction-buttons {
+            display: none !important;
+        }
+
+        /* Hide hamburger menus for viewers */
+        body.viewer-mode .hamburger-menu {
+            display: none !important;
+        }
+
+        /* Game restriction notice */
+        .game-restriction-notice {
+            background: #2196F3;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 20px;
+            display: none;
+        }
+
+        body.game-restricted .game-restriction-notice {
+            display: block;
+        }
+
+        /* Disable game selector for restricted viewers */
+        body.game-restricted #game-select {
+            pointer-events: none;
+            opacity: 0.6;
+            background: #f0f0f0;
+        }
+
+        body.game-restricted .game-selector-wrapper::after {
+            content: "🔒";
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }
+
+        .game-selector-wrapper {
+            position: relative;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Login Container */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h2 {
+            margin-bottom: 30px;
+            color: #333;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #5a67d8;
+        }
+
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: -2px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .login-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .login-message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .login-message.success {
+            background: #efe;
+            color: #3a3;
+            border: 1px solid #cfc;
+            display: block;
+        }
+    </style>
+
+    <!-- D3.js and other libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Dashboard...</div>
+    </div>
+
+    <!-- Login Container -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <h2>Floorball Dashboard</h2>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showLoginTab('code')">Access Code</button>
+                <button class="tab" onclick="showLoginTab('admin')">Admin Login</button>
+            </div>
+
+            <div id="loginMessage" class="login-message"></div>
+
+            <!-- Code Tab -->
+            <div id="codeTab" class="tab-content active">
+                <div class="form-group">
+                    <label>Enter 6-Digit Access Code</label>
+                    <input type="text" id="accessCode" maxlength="6" placeholder="ABC123"
+                           style="text-transform: uppercase; text-align: center; letter-spacing: 2px; font-family: monospace; font-size: 20px;"
+                           onkeyup="if(event.key === 'Enter') loginWithCode()">
+                </div>
+                <button class="login-btn" id="codeLoginBtn" onclick="loginWithCode()">Access Dashboard</button>
+            </div>
+
+            <!-- Admin Tab -->
+            <div id="adminTab" class="tab-content">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" value="admin">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" value="changeme123"
+                           onkeyup="if(event.key === 'Enter') loginAsAdmin()">
+                </div>
+                <button class="login-btn" id="adminLoginBtn" onclick="loginAsAdmin()">Login as Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Header (hidden initially) -->
+    <div class="auth-header" id="authHeader" style="display: none;">
+        <div class="auth-header-left">
+            <div class="auth-header-title">
+                Floorball Dashboard
+                <span class="admin-badge" id="adminBadge" style="display:none;">ADMIN</span>
+            </div>
+        </div>
+        <div class="auth-header-right">
+            <span class="user-info-display" id="userInfoDisplay"></span>
+            <button class="auth-logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Game Restriction Notice -->
+    <div class="game-restriction-notice">
+        ℹ️ Your access is limited to the selected game only
+    </div>
+
+    <!-- Original Dashboard Container -->
+    <div class="container" id="dashboardContainer" style="display: none;">
+        <header class="hidden"></header>
+
+        <main>
+            <!-- Import Tab (Admin Only) -->
+            <div id="import-tab" class="tab-content">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Import Data</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid-import" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn-import">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu-import">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                    <hr style="margin: 5px 0; border: none; border-top: 1px solid #e1e8ed;">
+                                    <button class="menu-item" onclick="window.open('/tokens.html', '_blank')">Access Tokens</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="import-content">
+                        <div class="game-info">
+                            <div class="form-group">
+                                <label for="game-name">Game Name:</label>
+                                <input type="text" id="game-name" placeholder="e.g., Kloten vs Fribourg">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="game-date">Game Date:</label>
+                                <input type="date" id="game-date">
+                            </div>
+                        </div>
+
+                        <div class="file-upload-area">
+                            <div class="upload-icon">📁</div>
+                            <p>Drag and drop CSV file here or click to browse</p>
+                            <input type="file" id="file-input" accept=".csv" hidden>
+                            <button id="browse-btn">Browse Files</button>
+                        </div>
+
+                        <div id="file-info" class="file-info" style="display: none;">
+                            <h3>File Information</h3>
+                            <p>Name: <span id="file-name"></span></p>
+                            <p>Size: <span id="file-size"></span></p>
+                            <p>Rows: <span id="file-rows"></span></p>
+                        </div>
+
+                        <button id="import-btn" class="import-btn" style="display: none;">Import to Database</button>
+
+                        <div id="import-status" class="import-status"></div>
+
+                        <div class="database-actions">
+                            <button id="save-db-btn">Save Database</button>
+                            <button id="download-db-btn">Download Database</button>
+                            <button id="load-db-btn">Load Database File</button>
+                            <input type="file" id="db-file-input" accept=".sqlite" hidden>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Statistics Dashboard</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                    <hr style="margin: 5px 0; border: none; border-top: 1px solid #e1e8ed;">
+                                    <button class="menu-item" onclick="window.open('/tokens.html', '_blank')">Access Tokens</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-content">
+                        <div class="dashboard-sidebar" id="dashboardSidebar"></div>
+
+                        <div class="visualization-grid">
+                            <div class="visualization shot-map">
+                                <div class="viz-header">
+                                    <h3>Shot Map</h3>
+                                </div>
+                                <div id="shot-map"></div>
+                            </div>
+
+                            <div class="visualization shot-distribution">
+                                <div class="viz-header">
+                                    <h3>xG Histogram</h3>
+                                </div>
+                                <div id="shot-histogram"></div>
+                            </div>
+
+                            <div class="visualization player-performance">
+                                <div class="viz-header">
+                                    <h3>Player Performance</h3>
+                                </div>
+                                <div id="performance-spider"></div>
+                            </div>
+
+                            <div class="visualization xg-scatter">
+                                <div class="viz-header">
+                                    <h3>xG vs xGOT Scatter</h3>
+                                </div>
+                                <div id="xg-scatter"></div>
+                            </div>
+
+                            <div class="visualization player-metrics">
+                                <div class="viz-header">
+                                    <h3>Player Metrics</h3>
+                                </div>
+                                <div id="player-metrics"></div>
+                            </div>
+
+                            <div class="visualization gk-histogram">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Save Distribution</h3>
+                                </div>
+                                <div id="gk-histogram"></div>
+                            </div>
+
+                            <div class="visualization gk-stats">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Statistics</h3>
+                                </div>
+                                <div id="gk-stats"></div>
+                            </div>
+
+                            <div class="visualization gk-radial">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Radial</h3>
+                                </div>
+                                <div id="gk-radial"></div>
+                            </div>
+
+                            <div class="visualization gk-quadrant">
+                                <div class="viz-header">
+                                    <h3>Goalkeeper Quadrant</h3>
+                                </div>
+                                <div id="gk-quadrant"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corrections Tab (Admin Only) -->
+            <div id="corrections-tab" class="tab-content">
+                <div class="dashboard-section">
+                    <div class="dashboard-header">
+                        <h2>Data Corrections</h2>
+                        <div class="header-controls">
+                            <button id="toggle-dev-grid-corrections" class="dev-grid-toggle-btn">Toggle Dev Grid</button>
+                            <div class="hamburger-menu">
+                                <button class="hamburger-btn" id="hamburger-btn-corrections">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdown-menu-corrections">
+                                    <button class="menu-item tab-button" data-tab="import">Import Data</button>
+                                    <button class="menu-item tab-button" data-tab="dashboard">Dashboard</button>
+                                    <button class="menu-item tab-button" data-tab="corrections">Corrections</button>
+                                    <hr style="margin: 5px 0; border: none; border-top: 1px solid #e1e8ed;">
+                                    <button class="menu-item" onclick="window.open('/tokens.html', '_blank')">Access Tokens</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="corrections-content">
+                        <div class="corrections-controls">
+                            <select id="game-select-corrections">
+                                <option value="">Select a game</option>
+                            </select>
+                            <button id="load-corrections-btn">Load Shots</button>
+                        </div>
+
+                        <div id="corrections-table-container"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dev Grid Overlay -->
+    <div id="dev-grid" class="dev-grid"></div>
+
+    <!-- Load all JavaScript modules -->
+    <script src="public/js/database.js"></script>
+    <script src="public/js/dashboard-sidebar.js"></script>
+    <script src="public/js/shothistogram.js"></script>
+    <script src="public/js/performancespider.js"></script>
+    <script src="public/js/goalkeeperstats.js"></script>
+    <script src="public/js/shotmap.js"></script>
+    <script src="public/js/corrections.js"></script>
+    <script src="public/js/csvimport.js"></script>
+    <script src="public/js/dev-grid.js"></script>
+    <script src="public/js/gkhistogram.js"></script>
+    <script src="public/js/gkradial.js"></script>
+    <script src="public/js/gkquadrant.js"></script>
+    <script src="public/js/xgscatter.js"></script>
+    <script src="public/js/playermetrics.js"></script>
+
+    <!-- Authentication & Integration Script -->
+    <script>
+        let authToken = null;
+        let currentUser = null;
+        let restrictedGameId = null;
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', async function() {
+            const storedToken = localStorage.getItem('authToken');
+            const storedUser = localStorage.getItem('currentUser');
+
+            if (storedToken && storedUser) {
+                authToken = storedToken;
+                currentUser = JSON.parse(storedUser);
+                await initializeDashboard();
+            } else {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('loginContainer').style.display = 'flex';
+            }
+        });
+
+        function showLoginTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+            if (tab === 'admin') {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('adminTab').classList.add('active');
+            } else {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('codeTab').classList.add('active');
+            }
+
+            document.getElementById('loginMessage').style.display = 'none';
+        }
+
+        async function loginAsAdmin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const message = document.getElementById('loginMessage');
+            const btn = document.getElementById('adminLoginBtn');
+
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    authToken = data.token;
+                    currentUser = data.user;
+
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    message.textContent = 'Login successful! Loading dashboard...';
+                    message.className = 'login-message success';
+
+                    setTimeout(() => {
+                        initializeDashboard();
+                    }, 500);
+                } else {
+                    message.textContent = data.error || 'Invalid credentials';
+                    message.className = 'login-message error';
+                }
+            } catch (error) {
+                message.textContent = 'Connection error. Please try again.';
+                message.className = 'login-message error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Login as Admin';
+            }
+        }
+
+        async function loginWithCode() {
+            const code = document.getElementById('accessCode').value.toUpperCase();
+            const message = document.getElementById('loginMessage');
+            const btn = document.getElementById('codeLoginBtn');
+
+            if (code.length !== 6) {
+                message.textContent = 'Please enter a 6-digit code';
+                message.className = 'login-message error';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch('/api/code/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    authToken = data.token;
+                    currentUser = {
+                        type: 'viewer',
+                        code: code,
+                        accessType: data.accessType,
+                        gameId: data.gameId
+                    };
+
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    message.textContent = 'Access granted! Loading dashboard...';
+                    message.className = 'login-message success';
+
+                    restrictedGameId = data.gameId;
+
+                    setTimeout(() => {
+                        initializeDashboard();
+                    }, 500);
+                } else {
+                    message.textContent = data.error || 'Invalid access code';
+                    message.className = 'login-message error';
+                }
+            } catch (error) {
+                message.textContent = 'Connection error. Please try again.';
+                message.className = 'login-message error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Access Dashboard';
+            }
+        }
+
+        async function initializeDashboard() {
+            // Hide login, show loading
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            // Setup UI based on user type
+            document.body.classList.add('authenticated');
+
+            if (currentUser.type === 'admin') {
+                document.body.classList.remove('viewer-mode');
+                document.body.classList.remove('game-restricted');
+                document.getElementById('adminBadge').style.display = 'inline-block';
+                document.getElementById('userInfoDisplay').textContent = `Admin: ${currentUser.username}`;
+            } else {
+                document.body.classList.add('viewer-mode');
+
+                if (currentUser.accessType === 'game' && currentUser.gameId) {
+                    document.body.classList.add('game-restricted');
+                    restrictedGameId = currentUser.gameId;
+                    document.getElementById('userInfoDisplay').textContent = `Viewer (Game Access)`;
+                } else {
+                    document.getElementById('userInfoDisplay').textContent = `Viewer (Season Access)`;
+                }
+            }
+
+            // Show auth header
+            document.getElementById('authHeader').style.display = 'flex';
+
+            // Show dashboard container
+            document.getElementById('dashboardContainer').style.display = 'block';
+
+            // Initialize the app after a short delay to ensure DOM is ready
+            setTimeout(async () => {
+                // Load app.js dynamically to ensure proper initialization
+                const script = document.createElement('script');
+                script.src = 'app.js';
+                script.onload = function() {
+                    // Override game selector for restricted users
+                    if (restrictedGameId && window.floorballApp) {
+                        // Wait for app initialization
+                        setTimeout(() => {
+                            const gameSelect = document.getElementById('game-select');
+                            if (gameSelect) {
+                                // Set the restricted game
+                                gameSelect.value = restrictedGameId;
+                                // Trigger change event to load the game
+                                gameSelect.dispatchEvent(new Event('change'));
+                            }
+                        }, 1000);
+                    }
+
+                    // Hide loading overlay
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                };
+                document.body.appendChild(script);
+            }, 500);
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            window.location.reload();
+        }
+
+        // Override save database function to include auth
+        window.saveDatabase = async function() {
+            if (currentUser && currentUser.type !== 'admin') {
+                alert('Only administrators can save the database');
+                return;
+            }
+
+            // Original save functionality will be handled by app.js
+            // but we need to add auth header
+            if (window.floorballApp && window.floorballApp.dbManager) {
+                const originalSave = window.floorballApp.dbManager.saveToServer;
+                window.floorballApp.dbManager.saveToServer = async function() {
+                    // Add auth header to the request
+                    const originalFetch = window.fetch;
+                    window.fetch = function(url, options = {}) {
+                        if (url.includes('/api/save-database')) {
+                            options.headers = {
+                                ...options.headers,
+                                'Authorization': `Bearer ${authToken}`
+                            };
+                        }
+                        return originalFetch(url, options);
+                    };
+
+                    return originalSave.call(this);
+                };
+            }
+        };
+    </script>
+</body>
+</html>
