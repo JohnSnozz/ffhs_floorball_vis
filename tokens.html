@@ -491,10 +491,11 @@
 
         // Check auth on load
         window.onload = function() {
-            authToken = localStorage.getItem('authToken');
-            const userType = localStorage.getItem('userType');
+            // Admin uses 'token', not 'authToken'
+            authToken = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole');
 
-            if (!authToken || userType !== 'admin') {
+            if (!authToken || userRole !== 'admin') {
                 alert('Admin access required');
                 window.location.href = '/';
                 return;

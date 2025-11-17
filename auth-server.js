@@ -400,8 +400,9 @@ const loginPageHTML = `<!DOCTYPE html>
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('userType', 'admin');
+                    // Admin uses 'token', not 'authToken'
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userRole', 'admin');
                     showMessage('Login successful! Redirecting...', 'success');
                     setTimeout(() => window.location.href = '/', 1000);
                 } else {
@@ -849,9 +850,12 @@ Bun.serve({
 <script>
 // Auth check - redirect if not logged in
 (function() {
-    const token = localStorage.getItem('authToken');
+    // Check for either admin token or access token
+    const adminToken = localStorage.getItem('token');
+    const accessToken = localStorage.getItem('authToken');
+    const token = adminToken || accessToken;
 
-    // If no token, redirect to login immediately
+    // If no token at all, redirect to login
     if (!token) {
         window.location.replace('/login');
         return;

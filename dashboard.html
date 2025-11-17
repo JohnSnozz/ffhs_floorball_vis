@@ -97,6 +97,11 @@
             display: none !important;
         }
 
+        /* Hide dev buttons for viewer mode (access token users) */
+        body.viewer-mode .dev-grid-toggle-btn {
+            display: none !important;
+        }
+
         /* Admin-only indicator */
         .admin-only-badge {
             display: inline-block;
@@ -272,10 +277,20 @@
             }, 500);
 
             // Check authentication
-            authToken = localStorage.getItem('auth_token');
-            userType = localStorage.getItem('user_type');
-            accessType = localStorage.getItem('access_type');
+            const adminToken = localStorage.getItem('token');  // Admin uses 'token'
+            authToken = localStorage.getItem('authToken');  // Access token users use 'authToken' (no underscore)
+            userType = localStorage.getItem('userType');
+            const userRole = localStorage.getItem('userRole');
+            accessType = localStorage.getItem('accessType');
 
+            // If admin, redirect to index.html (admin dashboard)
+            if (adminToken || userRole === 'admin') {
+                console.log('Admin user detected, redirecting to index.html');
+                window.location.href = '/';
+                return;
+            }
+
+            // If no access token, redirect to login
             if (!authToken) {
                 console.log('No token found, redirecting to login');
                 window.location.href = '/login.html';

@@ -762,6 +762,25 @@ class FloorballApp {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM LOADED - STARTING APP ===');
 
+    // Check authentication and set viewer mode if needed
+    const token = localStorage.getItem('token');  // Admin uses 'token'
+    const authToken = localStorage.getItem('authToken');  // Access token users use 'authToken'
+    const userRole = localStorage.getItem('userRole');
+
+    console.log('Auth check:', { token: !!token, authToken: !!authToken, userRole });
+
+    if (authToken && !token) {
+        // Access token user (has authToken but no admin token) - add viewer-mode class to hide dev buttons
+        document.body.classList.add('viewer-mode');
+        console.log('Viewer mode enabled - dev buttons hidden');
+    } else if (token) {
+        // Admin user - don't add viewer-mode, show everything
+        console.log('Admin mode - all controls visible');
+    } else {
+        // No authentication - probably local development or initial load
+        console.log('No authentication detected - showing all controls');
+    }
+
     // Check if required libraries are loaded
     console.log('D3 available:', typeof d3 !== 'undefined');
     console.log('D3.hexbin available:', typeof d3.hexbin !== 'undefined');

@@ -11,6 +11,37 @@
     <link rel="stylesheet" href="public/css/import.css">
     <link rel="stylesheet" href="public/css/corrections.css">
     <link rel="stylesheet" href="public/css/dev-tools.css">
+
+    <!-- Auth-based styles -->
+    <style>
+        /* Hide dev buttons for viewer mode (access token users) */
+        body.viewer-mode .dev-grid-toggle-btn {
+            display: none !important;
+        }
+
+        /* Hide hamburger menu for viewer mode */
+        body.viewer-mode .hamburger-menu {
+            display: none !important;
+        }
+
+        /* Hide admin-only tabs for viewer mode */
+        body.viewer-mode .tab-button[data-tab="import"] {
+            display: none !important;
+        }
+
+        body.viewer-mode .tab-button[data-tab="corrections"] {
+            display: none !important;
+        }
+
+        body.viewer-mode #import-tab {
+            display: none !important;
+        }
+
+        body.viewer-mode #corrections-tab {
+            display: none !important;
+        }
+    </style>
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
