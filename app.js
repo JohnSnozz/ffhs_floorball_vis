@@ -1,10 +1,20 @@
 async function debugLog(message, data = null) {
     try {
+        // Get JWT token if it exists
+        const token = localStorage.getItem('token');
+
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        // Add authorization header if token exists
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         await fetch('/api/debug-log', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify({
                 message,
                 data: data ? JSON.stringify(data) : null
@@ -268,7 +278,13 @@ class FloorballApp {
             const success = await this.dbManager.saveGameAlias(gameId, alias);
 
             if (success) {
+                // Update both game lists to show the new alias
                 await this.loadGamesList();
+                await this.corrections.loadCorrectionsGamesList();
+
+                // Keep the current selection
+                document.getElementById('corrections-game-select').value = gameId;
+
                 alert('Game alias saved successfully!');
             } else {
                 alert('Error saving game alias');
@@ -288,36 +304,15 @@ class FloorballApp {
         }
 
         try {
-            let shots;
+            console.log(`Loading data for game: ${gameId}`);
 
-            if (gameId === 'all') {
-                console.log('Loading data for ALL games');
-                shots = this.dbManager.db.exec(`
-                    SELECT * FROM shots_view
-                    ORDER BY game_id, shot_id
-                `);
-                console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} total shots across all games`);
-            } else {
-                console.log(`Loading data for game ID: ${gameId}`);
-                shots = this.dbManager.db.exec(`
-                    SELECT * FROM shots_view
-                    WHERE game_id = ?
-                    ORDER BY shot_id
-                `, [gameId]);
-                console.log(`Found ${shots.length > 0 ? shots[0].values.length : 0} shots for game ${gameId}`);
-            }
+            // Use the database manager's loadGameData method which uses shots_view
+            const data = await this.dbManager.loadGameData(gameId);
 
-            if (shots.length > 0 && shots[0].values.length > 0) {
-                const columns = shots[0].columns;
-                const data = shots[0].values.map(row => {
-                    const obj = {};
-                    columns.forEach((col, index) => {
-                        obj[col] = row[index];
-                    });
-                    return obj;
-                });
-
+            if (data && data.length > 0) {
+                console.log(`Found ${data.length} shots for game ${gameId}`);
                 console.log('Sample shot data:', data[0]);
+
                 this.currentGameData = data;
                 this.currentGameId = gameId;
                 this.dashboardSidebar.populateFilters(data);

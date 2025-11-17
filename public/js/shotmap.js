@@ -11,6 +11,15 @@ class ShotMap {
 
     async createShotMap(data, onFieldData = null) {
         console.log('Creating shot map...');
+        console.log('Data received in createShotMap:', data.length, 'shots');
+
+        // Debug: Check for goals in the data
+        const goals = data.filter(s => s.result === 'Goal');
+        console.log('Goals in shotmap data:', goals.length);
+        goals.forEach(g => {
+            console.log(`  Goal by ${g.shooter}: x=${g.x_graph}, y=${g.y_graph}, shot_id=${g.shot_id}`);
+        });
+
         await debugLog('Creating shot map', { dataLength: data.length, hasOnFieldData: !!onFieldData });
 
         if (!window.hexbinTracking) {
@@ -165,20 +174,43 @@ class ShotMap {
         const shotsWithCoords = filteredData.filter(shot => {
             const x = parseFloat(shot.x_graph);
             const y = parseFloat(shot.y_graph);
-            return !isNaN(x) && !isNaN(y) && x >= 0 && y >= 0;
+            const hasValidCoords = !isNaN(x) && !isNaN(y) && x >= 0 && y >= 0;
+            const isGoal = shot.result === 'Goal';
+
+            // Include shots with valid coordinates, but ALWAYS include goals
+            if (isGoal && !hasValidCoords) {
+                console.log(`Goal without valid coordinates found: shooter=${shot.shooter}, x=${shot.x_graph}, y=${shot.y_graph}`);
+            }
+
+            return hasValidCoords || isGoal;
         }).map(shot => {
             const team1 = shot.team1;
             const shootingTeam = shot.shooting_team;
             const isTeam1 = shootingTeam === team1;
 
             let visualX, visualY;
+            const x = parseFloat(shot.x_graph);
+            const y = parseFloat(shot.y_graph);
 
-            if (isTeam1) {
-                visualX = parseFloat(shot.x_graph) * scaleX;
-                visualY = parseFloat(shot.y_graph) * scaleY;
+            // If coordinates are missing but it's a goal, place it in front of the goal
+            if (isNaN(x) || isNaN(y)) {
+                // Default position: in front of goal (reasonable assumption for goals without coordinates)
+                if (isTeam1) {
+                    visualX = 300 * scaleX;  // Center x
+                    visualY = 1100 * scaleY; // Near opponent's goal
+                } else {
+                    visualX = 300 * scaleX;  // Center x
+                    visualY = 100 * scaleY;  // Near own goal (flipped)
+                }
+                console.log(`Shot without coordinates (${shot.shooter}, result: ${shot.result}), using default position`);
             } else {
-                visualX = (600 - parseFloat(shot.x_graph)) * scaleX;
-                visualY = (1200 - parseFloat(shot.y_graph)) * scaleY;
+                if (isTeam1) {
+                    visualX = x * scaleX;
+                    visualY = y * scaleY;
+                } else {
+                    visualX = (600 - x) * scaleX;
+                    visualY = (1200 - y) * scaleY;
+                }
             }
 
             return {
@@ -190,6 +222,14 @@ class ShotMap {
         });
 
         console.log(`Shots with valid coordinates: ${shotsWithCoords.length}`);
+
+        // Debug: Check for goals after coordinate processing
+        const goalsWithCoords = shotsWithCoords.filter(s => s.result === 'Goal');
+        console.log('Goals after coordinate processing:', goalsWithCoords.length);
+        goalsWithCoords.forEach(g => {
+            console.log(`  Goal by ${g.shooter}: visualX=${g.visualX?.toFixed(1)}, visualY=${g.visualY?.toFixed(1)}`);
+        });
+
         await debugLog('Shots with coordinates', {
             count: shotsWithCoords.length,
             sampleShot: shotsWithCoords[0] ? {
@@ -219,20 +259,34 @@ class ShotMap {
             onFieldShotsWithCoords = filteredOnFieldData.filter(shot => {
                 const x = parseFloat(shot.x_graph);
                 const y = parseFloat(shot.y_graph);
-                return !isNaN(x) && !isNaN(y) && x >= 0 && y >= 0;
+                // Include shots with valid coordinates OR goals (even without coordinates)
+                return (!isNaN(x) && !isNaN(y) && x >= 0 && y >= 0) || shot.result === 'Goal';
             }).map(shot => {
                 const team1 = shot.team1;
                 const shootingTeam = shot.shooting_team;
                 const isTeam1 = shootingTeam === team1;
 
                 let visualX, visualY;
+                const x = parseFloat(shot.x_graph);
+                const y = parseFloat(shot.y_graph);
 
-                if (isTeam1) {
-                    visualX = parseFloat(shot.x_graph) * scaleX;
-                    visualY = parseFloat(shot.y_graph) * scaleY;
+                // If coordinates are missing but it's a goal, place it in front of the goal
+                if (isNaN(x) || isNaN(y)) {
+                    if (isTeam1) {
+                        visualX = 300 * scaleX;  // Center x
+                        visualY = 1100 * scaleY; // Near opponent's goal
+                    } else {
+                        visualX = 300 * scaleX;  // Center x
+                        visualY = 100 * scaleY;  // Near own goal (flipped)
+                    }
                 } else {
-                    visualX = (600 - parseFloat(shot.x_graph)) * scaleX;
-                    visualY = (1200 - parseFloat(shot.y_graph)) * scaleY;
+                    if (isTeam1) {
+                        visualX = x * scaleX;
+                        visualY = y * scaleY;
+                    } else {
+                        visualX = (600 - x) * scaleX;
+                        visualY = (1200 - y) * scaleY;
+                    }
                 }
 
                 return {
@@ -250,28 +304,15 @@ class ShotMap {
 
         if (onFieldShotsWithCoords) {
             const upperGroup = heatmapGroup.append('g')
-                .attr('class', 'heatmap-upper')
-                .attr('clip-path', 'url(#upper-clip-path)');
+                .attr('class', 'heatmap-upper');
+                // No clip-path - show all shooter's shots regardless of field position
 
             const lowerGroup = heatmapGroup.append('g')
-                .attr('class', 'heatmap-lower')
-                .attr('clip-path', 'url(#lower-clip-path)');
+                .attr('class', 'heatmap-lower');
+                // No clip-path - show all on-field shots regardless of field position
 
-            svg.select('defs').append('clipPath')
-                .attr('id', 'upper-clip-path')
-                .append('rect')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('width', fieldWidth)
-                .attr('height', fieldHeight / 2);
-
-            svg.select('defs').append('clipPath')
-                .attr('id', 'lower-clip-path')
-                .append('rect')
-                .attr('x', 0)
-                .attr('y', fieldHeight / 2)
-                .attr('width', fieldWidth)
-                .attr('height', fieldHeight / 2);
+            // Removed clip-paths - we show all shots regardless of field position
+            // This ensures shots from defensive zone (like Fontana's empty netter) are visible
 
             console.log(`Creating split hexbins:`);
             console.log(`- Upper (shooter's shots): ${shotsWithCoords.length}`);
@@ -1165,6 +1206,14 @@ class ShotMap {
                 const total = bin.length;
                 const successRate = total > 0 ? goals / total : 0;
 
+                // Debug: Log hexbins with goals
+                if (goals > 0) {
+                    console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
+                    bin.filter(d => d.result === 'Goal').forEach(g => {
+                        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
+                    });
+                }
+
                 const xgValues = bin.map(d => parseFloat(d.xg)).filter(xg => !isNaN(xg));
                 const avgXG = xgValues.length > 0 ? d3.mean(xgValues) : 0;
                 const minXG = xgValues.length > 0 ? d3.min(xgValues) : 0;
@@ -1320,6 +1369,14 @@ class ShotMap {
                 const goals = bin.filter(d => d.result === 'Goal').length;
                 const total = bin.length;
                 const successRate = total > 0 ? goals / total : 0;
+
+                // Debug: Log hexbins with goals
+                if (goals > 0) {
+                    console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
+                    bin.filter(d => d.result === 'Goal').forEach(g => {
+                        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
+                    });
+                }
 
                 const xgValues = bin.map(d => parseFloat(d.xg)).filter(xg => !isNaN(xg));
                 const avgXG = xgValues.length > 0 ? d3.mean(xgValues) : 0;

@@ -71,10 +71,20 @@ class ShotHistogram {
             team1Shots = data.filter(d => d.shooting_team === team1);
             team2Shots = data.filter(d => d.shooting_team !== team1);
         } else {
-            team1 = uniqueShootingTeams[0];
-            team2 = uniqueShootingTeams.length > 1 ? uniqueShootingTeams[1] : team1;
-            team1Shots = data.filter(d => d.shooting_team === team1);
-            team2Shots = data.filter(d => d.shooting_team === team2);
+            // Use the actual team names from the data, not from shooting_team
+            const gameData = this.app.currentGameData;
+            if (gameData && gameData.length > 0) {
+                team1 = gameData[0].team1;  // Home team from the data
+                team2 = gameData[0].team2;  // Away team from the data
+                team1Shots = data.filter(d => d.shooting_team === team1);
+                team2Shots = data.filter(d => d.shooting_team === team2);
+            } else {
+                // Fallback to uniqueShootingTeams if no game data
+                team1 = uniqueShootingTeams[0];
+                team2 = uniqueShootingTeams.length > 1 ? uniqueShootingTeams[1] : team1;
+                team1Shots = data.filter(d => d.shooting_team === team1);
+                team2Shots = data.filter(d => d.shooting_team === team2);
+            }
         }
 
         console.log(`Team 1 (${team1}): ${team1Shots.length} shots`);

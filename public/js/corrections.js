@@ -51,7 +51,8 @@ class Corrections {
 
     async loadCorrectionsGamesList() {
         try {
-            const games = this.app.dbManager.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC");
+            // Use the same method as app.js to get games with aliases
+            const { games, aliases } = await this.app.dbManager.loadGamesList();
             const gameSelect = document.getElementById('corrections-game-select');
 
             if (!gameSelect) return;
@@ -59,11 +60,12 @@ class Corrections {
             gameSelect.innerHTML = '<option value="">Choose a game...</option>';
 
             if (games.length > 0) {
-                games[0].values.forEach(game => {
+                games.forEach(game => {
                     const [gameId, gameName, gameDate, team1, team2] = game;
+                    const displayName = aliases[gameId] || `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
                     const option = document.createElement('option');
                     option.value = gameId;
-                    option.textContent = `${gameName} (${gameDate}) - ${team1} vs ${team2}`;
+                    option.textContent = displayName;
                     gameSelect.appendChild(option);
                 });
             }
@@ -488,85 +490,67 @@ class Corrections {
                 }
             });
 
-            const existingCorrection = this.app.dbManager.db.exec(`SELECT shot_id FROM shot_corrections WHERE shot_id = ?`, [shotId]);
+            // Use the database manager's saveCorrection method
+            const success = await this.app.dbManager.saveCorrection(shotId, correctionData);
 
-            if (existingCorrection.length > 0 && existingCorrection[0].values.length > 0) {
-                this.app.dbManager.db.run(`
-                    UPDATE shot_corrections
-                    SET time = ?, result = ?, type = ?, is_turnover = ?, shooting_team = ?, shooter = ?, passer = ?,
-                        t1lw = ?, t1c = ?, t1rw = ?, t1ld = ?, t1rd = ?, t1g = ?, t1x = ?,
-                        pp = ?, sh = ?
-                    WHERE shot_id = ?
-                `, [
-                    correctionData.time,
-                    correctionData.result,
-                    correctionData.type,
-                    correctionData.is_turnover,
-                    correctionData.shooting_team,
-                    correctionData.shooter,
-                    correctionData.passer,
-                    correctionData.t1lw,
-                    correctionData.t1c,
-                    correctionData.t1rw,
-                    correctionData.t1ld,
-                    correctionData.t1rd,
-                    correctionData.t1g,
-                    correctionData.t1x,
-                    correctionData.pp,
-                    correctionData.sh,
-                    shotId
-                ]);
+            if (success) {
+                row.classList.add('has-correction');
+
+                // Reload corrections table
+                const gameId = document.getElementById('corrections-game-select').value;
+                this.loadCorrectionsForGame(gameId);
+
+                // Reload dashboard data to reflect the changes
+                if (gameId && this.app.currentGameId === gameId) {
+                    await this.app.loadGameData(gameId);
+                }
+
+                // Show success feedback
+                const saveBtn = row.querySelector('.save-correction-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Saved!';
+                    saveBtn.classList.add('saved');
+                    setTimeout(() => {
+                        saveBtn.textContent = 'Save';
+                        saveBtn.classList.remove('saved');
+                    }, 2000);
+                }
             } else {
-                this.app.dbManager.db.run(`
-                    INSERT INTO shot_corrections (
-                        shot_id, time, result, type, is_turnover, shooting_team, shooter, passer,
-                        t1lw, t1c, t1rw, t1ld, t1rd, t1g, t1x, pp, sh
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [
-                    shotId,
-                    correctionData.time,
-                    correctionData.result,
-                    correctionData.type,
-                    correctionData.is_turnover,
-                    correctionData.shooting_team,
-                    correctionData.shooter,
-                    correctionData.passer,
-                    correctionData.t1lw,
-                    correctionData.t1c,
-                    correctionData.t1rw,
-                    correctionData.t1ld,
-                    correctionData.t1rd,
-                    correctionData.t1g,
-                    correctionData.t1x,
-                    correctionData.pp,
-                    correctionData.sh
-                ]);
+                alert('Error saving correction');
             }
-
-            await this.app.dbManager.saveDatabaseToFile();
-
-            row.classList.add('has-correction');
-            const gameId = document.getElementById('corrections-game-select').value;
-            this.loadCorrectionsForGame(gameId);
 
         } catch (error) {
             console.error('Error saving correction:', error);
-            alert('Error saving correction');
+            alert('Error saving correction: ' + error.message);
         }
     }
 
     async deleteCorrection(shotId) {
         try {
-            this.app.dbManager.db.run(`DELETE FROM shot_corrections WHERE shot_id = ?`, [shotId]);
-            await this.app.dbManager.saveDatabaseToFile();
+            // Use the database manager's deleteCorrection method
+            const success = await this.app.dbManager.deleteCorrection(shotId);
 
-            const gameId = document.getElementById('corrections-game-select').value;
-            this.loadCorrectionsForGame(gameId);
+            if (success) {
+                const row = document.querySelector(`tr[data-shot-id="${shotId}"]`);
+                if (row) {
+                    row.classList.remove('has-correction');
+                }
+
+                // Reload corrections table
+                const gameId = document.getElementById('corrections-game-select').value;
+                this.loadCorrectionsForGame(gameId);
+
+                // Reload dashboard data to reflect the changes
+                if (gameId && this.app.currentGameId === gameId) {
+                    await this.app.loadGameData(gameId);
+                }
+            } else {
+                alert('Error deleting correction');
+            }
 
         } catch (error) {
             console.error('Error deleting correction:', error);
-            alert('Error deleting correction');
+            alert('Error deleting correction: ' + error.message);
         }
     }
 }

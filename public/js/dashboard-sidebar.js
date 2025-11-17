@@ -236,9 +236,33 @@ class DashboardSidebar {
         let filteredData = teamFilteredData;
 
         if (selectedShooters.length > 0) {
+            console.log('Filtering by shooters:', selectedShooters);
+
+            // Debug: Check what shooters are in the data
+            const uniqueShooters = [...new Set(teamFilteredData.map(s => s.shooter))];
+            console.log('Available shooters in data:', uniqueShooters);
+
+            // Check for any goals that might be filtered out
+            const goalsBeforeFilter = teamFilteredData.filter(s => s.result === 'Goal');
+            console.log('Goals before shooter filter:', goalsBeforeFilter.length, goalsBeforeFilter.map(g => ({
+                shooter: g.shooter,
+                shot_id: g.shot_id
+            })));
+
             filteredData = filteredData.filter(shot =>
                 selectedShooters.includes(shot.shooter)
             );
+
+            const goalsAfterFilter = filteredData.filter(s => s.result === 'Goal');
+            console.log('Goals after shooter filter:', goalsAfterFilter.length);
+
+            // Check what was filtered out
+            const filteredOutGoals = goalsBeforeFilter.filter(g =>
+                !filteredData.some(f => f.shot_id === g.shot_id)
+            );
+            if (filteredOutGoals.length > 0) {
+                console.warn('Goals filtered out:', filteredOutGoals);
+            }
         }
 
         if (selectedShooters.length === 1) {

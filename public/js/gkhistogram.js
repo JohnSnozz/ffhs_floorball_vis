@@ -91,6 +91,7 @@ class GoalkeeperHistogram {
 
         const goalkeeperGames = {};
 
+        // Count actual games where each goalkeeper played
         data.forEach(shot => {
             if (shot.t1g && shot.t1g !== '') {
                 if (!goalkeeperGames[shot.t1g]) {
@@ -100,14 +101,8 @@ class GoalkeeperHistogram {
             }
         });
 
-        const regularGK = this.getRegularGoalkeeper(data, team1Name);
-        if (regularGK) {
-            if (!goalkeeperGames[regularGK]) {
-                goalkeeperGames[regularGK] = new Set();
-            }
-            const uniqueGames = [...new Set(data.map(s => s.game_id))];
-            uniqueGames.forEach(gameId => goalkeeperGames[regularGK].add(gameId));
-        }
+        // Don't artificially inflate game counts for "regular" goalkeeper
+        // Each goalkeeper should only get credit for games they actually played in
 
         return Object.entries(goalkeeperGames)
             .map(([gk, gameIds]) => ({

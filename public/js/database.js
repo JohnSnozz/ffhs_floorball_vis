@@ -380,11 +380,21 @@ class DatabaseManager {
 
     async uploadDatabaseToServer(dbArray) {
         try {
+            // Get JWT token if it exists
+            const token = localStorage.getItem('token');
+
+            const headers = {
+                'Content-Type': 'application/octet-stream',
+            };
+
+            // Add authorization header if token exists
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('/api/save-database', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                },
+                headers: headers,
                 body: dbArray
             });
 
@@ -392,6 +402,12 @@ class DatabaseManager {
                 console.log('Database uploaded successfully');
                 return true;
             } else {
+                // If unauthorized, might be a token issue
+                if (response.status === 401 || response.status === 403) {
+                    console.error('Authentication failed. Please login again.');
+                    // Don't throw error for auth issues, just log it
+                    return false;
+                }
                 throw new Error(`Server responded with ${response.status}`);
             }
         } catch (error) {
@@ -475,8 +491,44 @@ class DatabaseManager {
         }
 
         try {
+            // First check if the table has the expected structure
+            const tableInfo = this.db.exec("PRAGMA table_info(game_aliases)");
+            if (tableInfo.length > 0) {
+                const columns = tableInfo[0].values.map(col => col[1]);
+
+                // If the table doesn't have an 'id' column, recreate it
+                if (!columns.includes('id')) {
+                    console.log('Recreating game_aliases table with proper structure...');
+
+                    // Save existing data
+                    const existingData = this.db.exec("SELECT game_id, alias FROM game_aliases");
+
+                    // Drop and recreate the table
+                    this.db.run("DROP TABLE IF EXISTS game_aliases");
+                    this.db.run(`
+                        CREATE TABLE game_aliases (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            game_id INTEGER NOT NULL UNIQUE,
+                            alias TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
+                        )
+                    `);
+
+                    // Restore existing data
+                    if (existingData.length > 0 && existingData[0].values.length > 0) {
+                        existingData[0].values.forEach(([gId, al]) => {
+                            if (al) {
+                                this.db.run("INSERT INTO game_aliases (game_id, alias) VALUES (?, ?)", [gId, al]);
+                            }
+                        });
+                    }
+                }
+            }
+
             if (alias) {
-                const existing = this.db.exec("SELECT id FROM game_aliases WHERE game_id = ?", [gameId]);
+                // Check if entry exists using game_id (which should always exist)
+                const existing = this.db.exec("SELECT game_id FROM game_aliases WHERE game_id = ?", [gameId]);
 
                 if (existing.length > 0 && existing[0].values.length > 0) {
                     this.db.run("UPDATE game_aliases SET alias = ? WHERE game_id = ?", [alias, gameId]);
@@ -804,14 +856,11 @@ class DatabaseManager {
     getAllPlayers() {
         try {
             const result = this.db.exec(`
-                SELECT DISTINCT shooter as player FROM corrected_shots
+                SELECT DISTINCT shooter as player FROM shots_view
                 WHERE shooter IS NOT NULL AND shooter != ''
                 UNION
-                SELECT DISTINCT final_assisted_by as player FROM corrected_shots
-                WHERE final_assisted_by IS NOT NULL AND final_assisted_by != ''
-                UNION
-                SELECT DISTINCT defender as player FROM corrected_shots
-                WHERE defender IS NOT NULL AND defender != ''
+                SELECT DISTINCT passer as player FROM shots_view
+                WHERE passer IS NOT NULL AND passer != ''
                 ORDER BY player
             `);
 
