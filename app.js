@@ -812,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
         const app = new FloorballApp();
+        window.app = app;  // Make app globally available
         console.log('FloorballApp created successfully:', app);
         debugLog('FloorballApp created successfully');
         window.floorballApp = app; // Make it globally accessible for debugging

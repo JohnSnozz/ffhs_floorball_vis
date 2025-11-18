@@ -42,7 +42,14 @@
         }
     </style>
 
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- D3.js - Try CDN first, fallback to local -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script>
+        // Fallback to local D3 if CDN fails
+        if (typeof d3 === 'undefined') {
+            document.write('<script src="public/js/d3.v7.min.js"><\/script>');
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <!-- D3 Loading Check -->

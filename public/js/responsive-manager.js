@@ -43,16 +43,17 @@ class ResponsiveManager {
             // Check if essential elements and libraries exist
             const container = document.querySelector('.container');
             const dashboardMain = document.querySelector('.dashboard-main');
-            const d3Available = typeof d3 !== 'undefined';
+            const d3Available = typeof d3 !== 'undefined' && d3.version;
+            const appAvailable = window.app || window.floorballApp;
 
-            if (container && dashboardMain && window.app && d3Available) {
+            if (container && dashboardMain && appAvailable && d3Available) {
                 console.log('App ready, initializing responsive manager');
                 this.setup();
             } else if (attempts < maxAttempts) {
                 const missing = [];
                 if (!container) missing.push('container');
                 if (!dashboardMain) missing.push('dashboard-main');
-                if (!window.app) missing.push('app');
+                if (!appAvailable) missing.push('app');
                 if (!d3Available) missing.push('D3.js');
 
                 console.log(`Waiting for: ${missing.join(', ')} (attempt ${attempts})`);
@@ -61,7 +62,7 @@ class ResponsiveManager {
                 console.error('Failed to initialize responsive manager - missing:', {
                     container: !!container,
                     dashboardMain: !!dashboardMain,
-                    app: !!window.app,
+                    app: !!appAvailable,
                     d3: d3Available
                 });
                 // Try to setup anyway
