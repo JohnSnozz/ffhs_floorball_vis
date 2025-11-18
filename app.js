@@ -1,3 +1,4 @@
+// Make debugLog globally available for all modules
 async function debugLog(message, data = null) {
     try {
         // Get JWT token if it exists
@@ -25,6 +26,9 @@ async function debugLog(message, data = null) {
     }
 }
 
+// Also make it available as window.debugLog for other modules
+window.debugLog = debugLog;
+
 class FloorballApp {
     constructor() {
         console.log('FloorballApp constructor called');
@@ -40,56 +44,56 @@ class FloorballApp {
 
     async initializeApp() {
         try {
-            console.log('Starting app initialization...');
+        console.log('Starting app initialization...');
             await debugLog('Starting app initialization');
 
             await this.dbManager.initialize();
-            console.log('Database initialized');
+        console.log('Database initialized');
             await debugLog('Database initialized');
 
             this.setupEventListeners();
-            console.log('Event listeners set up');
+        console.log('Event listeners set up');
             await debugLog('Event listeners set up');
 
             this.dashboardSidebar = new DashboardSidebar(this);
-            console.log('Dashboard sidebar initialized');
+        console.log('Dashboard sidebar initialized');
 
             this.shotHistogram = new ShotHistogram(this);
-            console.log('Shot histogram initialized');
+        console.log('Shot histogram initialized');
 
             this.performanceSpider = new PerformanceSpider(this);
-            console.log('Performance spider initialized');
+        console.log('Performance spider initialized');
 
             this.xgScatter = new XGScatterPlot(this);
-            console.log('xG Scatter plot initialized');
+        console.log('xG Scatter plot initialized');
 
             this.playerMetrics = new PlayerMetrics(this);
-            console.log('Player metrics initialized');
+        console.log('Player metrics initialized');
 
             this.goalkeeperStats = new GoalkeeperStats(this);
-            console.log('Goalkeeper stats initialized');
+        console.log('Goalkeeper stats initialized');
 
             this.shotMap = new ShotMap(this);
-            console.log('Shot map initialized');
+        console.log('Shot map initialized');
 
             this.corrections = new Corrections(this);
-            console.log('Corrections initialized');
+        console.log('Corrections initialized');
 
             this.csvImport = new CSVImport(this);
-            console.log('CSV Import initialized');
+        console.log('CSV Import initialized');
 
             this.setupTabs();
-            console.log('Tabs set up');
+        console.log('Tabs set up');
             await debugLog('Tabs set up');
 
             await this.loadGamesList();
             await this.corrections.loadCorrectionsGamesList();
-            console.log('Floorball app initialized successfully');
+        console.log('Floorball app initialized successfully');
             await debugLog('Floorball app initialized successfully');
 
             // Check initial database state
             const state = this.dbManager.checkDatabaseState();
-            console.log('Database state:', state);
+        console.log('Database state:', state);
         } catch (error) {
             console.error('Failed to initialize app:', error);
             await debugLog('Failed to initialize app', { error: error.message });
@@ -304,14 +308,14 @@ class FloorballApp {
         }
 
         try {
-            console.log(`Loading data for game: ${gameId}`);
+        console.log(`Loading data for game: ${gameId}`);
 
             // Use the database manager's loadGameData method which uses shots_view
             const data = await this.dbManager.loadGameData(gameId);
 
             if (data && data.length > 0) {
-                console.log(`Found ${data.length} shots for game ${gameId}`);
-                console.log('Sample shot data:', data[0]);
+        console.log(`Found ${data.length} shots for game ${gameId}`);
+        console.log('Sample shot data:', data[0]);
 
                 this.currentGameData = data;
                 this.currentGameId = gameId;
@@ -320,7 +324,7 @@ class FloorballApp {
                 // Apply current filters instead of directly creating charts with unfiltered data
                 this.dashboardSidebar.applyFilters();
             } else {
-                console.log('No shots found for this game');
+        console.log('No shots found for this game');
                 this.currentGameData = null;
                 this.currentGameId = null;
                 this.clearCharts();
@@ -340,7 +344,7 @@ class FloorballApp {
         // Check teams in currentGameData
         if (this.currentGameData) {
             const teams = new Set(this.currentGameData.map(d => d.shooting_team));
-            console.log('Teams in currentGameData:', Array.from(teams));
+        console.log('Teams in currentGameData:', Array.from(teams));
         }
 
         // Calculate "on field" data if shooter is selected
@@ -370,25 +374,25 @@ class FloorballApp {
                 return isOpponentShot && playerOnField;
             });
 
-            console.log(`On-field filtering for ${this.selectedShooter}:`);
-            console.log(`- Total shots in currentGameData: ${this.currentGameData.length}`);
+        console.log(`On-field filtering for ${this.selectedShooter}:`);
+        console.log(`- Total shots in currentGameData: ${this.currentGameData.length}`);
 
             // Check what teams are in currentGameData
             const allShootingTeams = new Set(this.currentGameData.map(d => d.shooting_team));
-            console.log(`- All shooting teams in currentGameData:`, Array.from(allShootingTeams));
+        console.log(`- All shooting teams in currentGameData:`, Array.from(allShootingTeams));
 
             const opponentShots = this.currentGameData.filter(d => d.shooting_team !== team1Name);
-            console.log(`- Total opponent shots (shooting_team != ${team1Name}): ${opponentShots.length}`);
-            console.log(`- Opponent shots when ${this.selectedShooter} on field: ${onFieldData.length}`);
+        console.log(`- Total opponent shots (shooting_team != ${team1Name}): ${opponentShots.length}`);
+        console.log(`- Opponent shots when ${this.selectedShooter} on field: ${onFieldData.length}`);
 
             // Detailed verification for debugging
             if (this.selectedShooter === '#27 Griezitis') {
                 // Run direct SQL queries to check the actual database
-                console.log('=== DIRECT DATABASE CHECK ===');
+        console.log('=== DIRECT DATABASE CHECK ===');
 
                 // Query 1: Total shots in database
                 const totalShots = this.dbManager.db.exec(`SELECT COUNT(*) as count FROM shots`);
-                console.log('Total shots in database:', totalShots[0]?.values[0][0]);
+        console.log('Total shots in database:', totalShots[0]?.values[0][0]);
 
                 // Query 2: Shots by team
                 const shotsByTeam = this.dbManager.db.exec(`
@@ -396,9 +400,9 @@ class FloorballApp {
                     FROM shots
                     GROUP BY shooting_team
                 `);
-                console.log('Shots by team:');
+        console.log('Shots by team:');
                 shotsByTeam[0]?.values.forEach(row => {
-                    console.log(`  ${row[0]}: ${row[1]} shots`);
+        console.log(`  ${row[0]}: ${row[1]} shots`);
                 });
 
                 // Query 3: Griezitis on field for opponent shots (matching your SQL)
@@ -414,7 +418,7 @@ class FloorballApp {
                         OR t1g LIKE '%#27 Griezitis%'
                         OR t1x LIKE '%#27 Griezitis%')
                 `);
-                console.log('Griezitis on field for opponent shots (SQL):', griezitisOpponentShots[0]?.values[0][0]);
+        console.log('Griezitis on field for opponent shots (SQL):', griezitisOpponentShots[0]?.values[0][0]);
 
                 // Query 4: Griezitis on field for Team 1 shots
                 const griezitisTeamShots = this.dbManager.db.exec(`
@@ -429,7 +433,7 @@ class FloorballApp {
                         OR t1g LIKE '%#27 Griezitis%'
                         OR t1x LIKE '%#27 Griezitis%')
                 `);
-                console.log('Griezitis on field for Team 1 shots (SQL):', griezitisTeamShots[0]?.values[0][0]);
+        console.log('Griezitis on field for Team 1 shots (SQL):', griezitisTeamShots[0]?.values[0][0]);
 
                 // Query 5: Check team structure
                 const teamStructure = this.dbManager.db.exec(`
@@ -437,15 +441,15 @@ class FloorballApp {
                     FROM shots
                     LIMIT 5
                 `);
-                console.log('Sample team structures:');
+        console.log('Sample team structures:');
                 teamStructure[0]?.values.forEach(row => {
-                    console.log(`  team1="${row[0]}", team2="${row[1]}", shooting="${row[2]}"`);
+        console.log(`  team1="${row[0]}", team2="${row[1]}", shooting="${row[2]}"`);
                 });
 
                 // Now check the JavaScript data
-                console.log('=== JAVASCRIPT DATA CHECK ===');
+        console.log('=== JAVASCRIPT DATA CHECK ===');
                 const sample = this.currentGameData[0];
-                console.log('Sample shot:', {
+        console.log('Sample shot:', {
                     team1: sample.team1,
                     team2: sample.team2,
                     shooting_team: sample.shooting_team
@@ -453,11 +457,11 @@ class FloorballApp {
 
                 // Check how many shots have team2 defined
                 const shotsWithTeam2 = this.currentGameData.filter(d => d.team2).length;
-                console.log(`Shots with team2 defined: ${shotsWithTeam2} of ${this.currentGameData.length}`);
+        console.log(`Shots with team2 defined: ${shotsWithTeam2} of ${this.currentGameData.length}`);
 
                 // Get all unique shooting teams
                 const shootingTeams = new Set(this.currentGameData.map(d => d.shooting_team));
-                console.log('All shooting teams:', Array.from(shootingTeams));
+        console.log('All shooting teams:', Array.from(shootingTeams));
 
                 const totalOpponentShots = this.currentGameData.filter(d => d.shooting_team !== team1Name).length;
                 const playerPositions = ['t1lw', 't1c', 't1rw', 't1ld', 't1rd', 't1g', 't1x'];
@@ -480,10 +484,10 @@ class FloorballApp {
                     return count > 1;
                 });
 
-                console.log(`VERIFICATION for #27 Griezitis:`);
-                console.log(`- Team 1 name: ${team1Name}`);
-                console.log(`- Team 2 name: ${team2Name}`);
-                console.log(`- Total shots in dataset: ${this.currentGameData.length}`);
+        console.log(`VERIFICATION for #27 Griezitis:`);
+        console.log(`- Team 1 name: ${team1Name}`);
+        console.log(`- Team 2 name: ${team2Name}`);
+        console.log(`- Total shots in dataset: ${this.currentGameData.length}`);
 
                 // Check different filtering approaches
                 const method1 = this.currentGameData.filter(d =>
@@ -508,13 +512,13 @@ class FloorballApp {
                     uniqueTeamCombos.add(`team1=${d.team1}, team2=${d.team2}, shooting=${d.shooting_team}`);
                 });
 
-                console.log(`- Method 1 (team2 = shooting_team): ${method1}`);
-                console.log(`- Method 2 (shooting_team != team1): ${method2}`);
-                console.log(`- Current filter result: ${onFieldData.length}`);
-                console.log(`- Unique team combinations (first 5):`);
+        console.log(`- Method 1 (team2 = shooting_team): ${method1}`);
+        console.log(`- Method 2 (shooting_team != team1): ${method2}`);
+        console.log(`- Current filter result: ${onFieldData.length}`);
+        console.log(`- Unique team combinations (first 5):`);
                 Array.from(uniqueTeamCombos).slice(0, 5).forEach(combo => console.log(`    ${combo}`));
-                console.log(`- Opponent shots by position where Griezitis appears:`, opponentShotsPerPosition);
-                console.log(`- Shots where Griezitis in MULTIPLE positions: ${shotsWithMultiplePositions.length}`);
+        console.log(`- Opponent shots by position where Griezitis appears:`, opponentShotsPerPosition);
+        console.log(`- Shots where Griezitis in MULTIPLE positions: ${shotsWithMultiplePositions.length}`);
 
                 // SQL equivalent check
                 const sqlLikeCount = this.currentGameData.filter(d =>
@@ -524,12 +528,12 @@ class FloorballApp {
                      d.t1rd === '#27 Griezitis' || d.t1g === '#27 Griezitis' ||
                      d.t1x === '#27 Griezitis')
                 ).length;
-                console.log(`- Count using SQL-like logic: ${sqlLikeCount}`);
-                console.log(`- Count from filter (onFieldData): ${onFieldData.length}`);
+        console.log(`- Count using SQL-like logic: ${sqlLikeCount}`);
+        console.log(`- Count from filter (onFieldData): ${onFieldData.length}`);
 
                 // Show actual team names to verify
                 const teams = new Set(this.currentGameData.map(d => d.shooting_team));
-                console.log(`- All teams in dataset:`, Array.from(teams));
+        console.log(`- All teams in dataset:`, Array.from(teams));
             }
         }
         await this.shotMap.createShotMap(data, onFieldData);
@@ -760,14 +764,14 @@ class FloorballApp {
 
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('=== DOM LOADED - STARTING APP ===');
+        console.log('=== DOM LOADED - STARTING APP ===');
 
     // Check authentication and set viewer mode if needed
     const token = localStorage.getItem('token');  // Admin uses 'token'
     const authToken = localStorage.getItem('authToken');  // Access token users use 'authToken'
     const userRole = localStorage.getItem('userRole');
 
-    console.log('Auth check:', { token: !!token, authToken: !!authToken, userRole });
+        console.log('Auth check:', { token: !!token, authToken: !!authToken, userRole });
 
     if (authToken && !token) {
         // Access token user (has authToken but no admin token) - add viewer-mode class to hide dev buttons
@@ -782,9 +786,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Check if required libraries are loaded
-    console.log('D3 available:', typeof d3 !== 'undefined');
-    console.log('D3.hexbin available:', typeof d3.hexbin !== 'undefined');
-    console.log('SQL.js available:', typeof window.initSqlJs !== 'undefined');
+        console.log('D3 available:', typeof d3 !== 'undefined');
+        console.log('D3.hexbin available:', typeof d3.hexbin !== 'undefined');
+        console.log('SQL.js available:', typeof window.initSqlJs !== 'undefined');
 
     // Detailed d3-hexbin check
     if (typeof d3 !== 'undefined' && typeof d3.hexbin === 'undefined') {
@@ -792,10 +796,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Attempting to verify d3-hexbin script tag...');
         const hexbinScript = document.querySelector('script[src*="d3-hexbin"]');
         if (hexbinScript) {
-            console.log('d3-hexbin script tag found:', hexbinScript.src);
-            console.log('Script loading may have failed or is still pending.');
+        console.log('d3-hexbin script tag found:', hexbinScript.src);
+        console.log('Script loading may have failed or is still pending.');
         } else {
-            console.log('No d3-hexbin script tag found in document!');
+        console.log('No d3-hexbin script tag found in document!');
         }
     }
 

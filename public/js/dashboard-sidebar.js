@@ -74,7 +74,7 @@ class DashboardSidebar {
             toggleShotDots.addEventListener('click', () => {
                 toggleShotDots.classList.toggle('active');
                 const isActive = toggleShotDots.classList.contains('active');
-                console.log('Toggle shot dots:', isActive);
+        console.log('Toggle shot dots:', isActive);
                 this.app.shotMap.toggleShotDots(isActive);
             });
         }
@@ -84,7 +84,7 @@ class DashboardSidebar {
             toggleHeatmap.addEventListener('click', () => {
                 toggleHeatmap.classList.toggle('active');
                 const isActive = toggleHeatmap.classList.contains('active');
-                console.log('Toggle heatmap:', isActive);
+        console.log('Toggle heatmap:', isActive);
                 this.app.shotMap.toggleHeatmap(isActive);
             });
         }
@@ -236,15 +236,15 @@ class DashboardSidebar {
         let filteredData = teamFilteredData;
 
         if (selectedShooters.length > 0) {
-            console.log('Filtering by shooters:', selectedShooters);
+        console.log('Filtering by shooters:', selectedShooters);
 
             // Debug: Check what shooters are in the data
             const uniqueShooters = [...new Set(teamFilteredData.map(s => s.shooter))];
-            console.log('Available shooters in data:', uniqueShooters);
+        console.log('Available shooters in data:', uniqueShooters);
 
             // Check for any goals that might be filtered out
             const goalsBeforeFilter = teamFilteredData.filter(s => s.result === 'Goal');
-            console.log('Goals before shooter filter:', goalsBeforeFilter.length, goalsBeforeFilter.map(g => ({
+        console.log('Goals before shooter filter:', goalsBeforeFilter.length, goalsBeforeFilter.map(g => ({
                 shooter: g.shooter,
                 shot_id: g.shot_id
             })));
@@ -254,14 +254,14 @@ class DashboardSidebar {
             );
 
             const goalsAfterFilter = filteredData.filter(s => s.result === 'Goal');
-            console.log('Goals after shooter filter:', goalsAfterFilter.length);
+        console.log('Goals after shooter filter:', goalsAfterFilter.length);
 
             // Check what was filtered out
             const filteredOutGoals = goalsBeforeFilter.filter(g =>
                 !filteredData.some(f => f.shot_id === g.shot_id)
             );
             if (filteredOutGoals.length > 0) {
-                console.warn('Goals filtered out:', filteredOutGoals);
+        console.warn('Goals filtered out:', filteredOutGoals);
             }
         }
 

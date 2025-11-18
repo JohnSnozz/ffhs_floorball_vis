@@ -6,12 +6,12 @@ class DatabaseManager {
 
     async initialize() {
         console.log('Loading SQL.js...');
-        await debugLog('Loading SQL.js...');
+        await window.debugLog('Loading SQL.js...');
 
         // SQL.js should be loaded from CDN in HTML
         if (typeof window.initSqlJs === 'undefined') {
             console.error('SQL.js not loaded from CDN');
-            await debugLog('SQL.js not loaded from CDN');
+            await window.debugLog('SQL.js not loaded from CDN');
             throw new Error('SQL.js not available');
         }
 
@@ -24,25 +24,25 @@ class DatabaseManager {
         // Try to load existing database file first
         let loadedExisting = false;
         try {
-            console.log('Checking for existing database file...');
+        console.log('Checking for existing database file...');
             const response = await fetch('./floorball_data.sqlite');
             if (response.ok) {
-                console.log('Loading existing database file...');
+        console.log('Loading existing database file...');
                 const dbBuffer = await response.arrayBuffer();
                 this.db = new SQL.Database(new Uint8Array(dbBuffer));
-                console.log('Existing database file loaded successfully');
+        console.log('Existing database file loaded successfully');
 
                 // Verify tables exist
                 const tables = this.db.exec("SELECT name FROM sqlite_master WHERE type='table'");
-                console.log('Existing tables:', tables);
+        console.log('Existing tables:', tables);
                 loadedExisting = true;
             }
         } catch (error) {
-            console.log('No existing database file found, creating new one...');
+        console.log('No existing database file found, creating new one...');
         }
 
         if (loadedExisting) {
-            console.log('Database loaded from file, migrating if needed...');
+        console.log('Database loaded from file, migrating if needed...');
             await this.migrateDatabase();
             this.createOrUpdateViews();
             return;
@@ -150,7 +150,7 @@ class DatabaseManager {
 
     async migrateDatabase() {
         try {
-            console.log('Checking for database migrations...');
+        console.log('Checking for database migrations...');
 
             // Check if shots table exists and has all columns
             const tableInfo = this.db.exec("PRAGMA table_info(shots)");
@@ -161,7 +161,7 @@ class DatabaseManager {
                 const missingColumns = requiredColumns.filter(col => !columns.includes(col));
 
                 if (missingColumns.length > 0) {
-                    console.log('Missing columns in shots table:', missingColumns);
+        console.log('Missing columns in shots table:', missingColumns);
 
                     // Create a backup of existing data
                     const shots = this.db.exec("SELECT * FROM shots");
@@ -215,7 +215,7 @@ class DatabaseManager {
                     // Restore data if there was any
                     if (shots.length > 0) {
                         // Map old data to new schema with default values for missing columns
-                        console.log('Migrating existing shots data...');
+        console.log('Migrating existing shots data...');
                     }
                 }
             }
@@ -227,7 +227,7 @@ class DatabaseManager {
             if (gameTableInfo.length > 0) {
                 const gameColumns = gameTableInfo[0].values.map(col => col[1]);
                 if (!gameColumns.includes('team1') || !gameColumns.includes('team2')) {
-                    console.log('Adding team columns to games table...');
+        console.log('Adding team columns to games table...');
                     this.db.run("ALTER TABLE games ADD COLUMN team1 TEXT");
                     this.db.run("ALTER TABLE games ADD COLUMN team2 TEXT");
 
@@ -237,7 +237,7 @@ class DatabaseManager {
                         if (teams.length >= 2) {
                             const updateQuery = `UPDATE games SET team1 = '${teams[0]}', team2 = '${teams[1]}'`;
                             this.db.run(updateQuery);
-                            console.log(`Updated games with teams: ${teams[0]} vs ${teams[1]}`);
+        console.log(`Updated games with teams: ${teams[0]} vs ${teams[1]}`);
                         }
                     }
                 }
@@ -248,7 +248,7 @@ class DatabaseManager {
             const tableNames = tables.length > 0 ? tables[0].values.map(t => t[0]) : [];
 
             if (!tableNames.includes('shot_corrections')) {
-                console.log('Creating shot_corrections table...');
+        console.log('Creating shot_corrections table...');
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS shot_corrections (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -272,7 +272,7 @@ class DatabaseManager {
                 if (correctionTableInfo.length > 0) {
                     const correctionColumns = correctionTableInfo[0].values.map(col => col[1]);
                     if (!correctionColumns.includes('is_turnover')) {
-                        console.log('Adding is_turnover column to shot_corrections...');
+        console.log('Adding is_turnover column to shot_corrections...');
                         this.db.run("ALTER TABLE shot_corrections ADD COLUMN is_turnover BOOLEAN DEFAULT 0");
                     }
                 }
@@ -280,7 +280,7 @@ class DatabaseManager {
 
             // Check for game_aliases table
             if (!tableNames.includes('game_aliases')) {
-                console.log('Creating game_aliases table...');
+        console.log('Creating game_aliases table...');
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS game_aliases (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -292,10 +292,10 @@ class DatabaseManager {
                 `);
             }
 
-            console.log('Database migration completed');
+        console.log('Database migration completed');
         } catch (error) {
             console.error('Database migration error:', error);
-            await debugLog('Database migration error', { error: error.message });
+            await window.debugLog('Database migration error', { error: error.message });
         }
     }
 
@@ -356,7 +356,7 @@ class DatabaseManager {
                 LEFT JOIN shot_corrections c ON s.shot_id = c.shot_id;
             `);
 
-            console.log('Database views created/updated successfully');
+        console.log('Database views created/updated successfully');
         } catch (error) {
             console.error('Error creating/updating views:', error);
         }
@@ -369,11 +369,11 @@ class DatabaseManager {
 
             await this.uploadDatabaseToServer(buffer);
 
-            console.log('Database saved successfully');
+        console.log('Database saved successfully');
             return true;
         } catch (error) {
             console.error('Failed to save database:', error);
-            await debugLog('Failed to save database', { error: error.message });
+            await window.debugLog('Failed to save database', { error: error.message });
             return false;
         }
     }
@@ -399,7 +399,7 @@ class DatabaseManager {
             });
 
             if (response.ok) {
-                console.log('Database uploaded successfully');
+        console.log('Database uploaded successfully');
                 return true;
             } else {
                 // If unauthorized, might be a token issue
@@ -412,7 +412,7 @@ class DatabaseManager {
             }
         } catch (error) {
             console.error('Failed to upload database:', error);
-            await debugLog('Failed to upload database', { error: error.message });
+            await window.debugLog('Failed to upload database', { error: error.message });
             return false;
         }
     }
@@ -420,13 +420,13 @@ class DatabaseManager {
     checkDatabaseState() {
         try {
             const tables = this.db.exec("SELECT name FROM sqlite_master WHERE type='table'");
-            console.log('Current tables:', tables);
+        console.log('Current tables:', tables);
 
             const gamesCount = this.db.exec("SELECT COUNT(*) FROM games");
             const shotsCount = this.db.exec("SELECT COUNT(*) FROM shots");
 
-            console.log('Games count:', gamesCount[0]?.values[0]?.[0] || 0);
-            console.log('Shots count:', shotsCount[0]?.values[0]?.[0] || 0);
+        console.log('Games count:', gamesCount[0]?.values[0]?.[0] || 0);
+        console.log('Shots count:', shotsCount[0]?.values[0]?.[0] || 0);
 
             return {
                 tables: tables[0]?.values.map(t => t[0]) || [],
@@ -458,7 +458,7 @@ class DatabaseManager {
             };
         } catch (error) {
             console.error('Error loading games list:', error);
-            await debugLog('Error loading games list', { error: error.message });
+            await window.debugLog('Error loading games list', { error: error.message });
             return { games: [], aliases: {} };
         }
     }
@@ -498,7 +498,7 @@ class DatabaseManager {
 
                 // If the table doesn't have an 'id' column, recreate it
                 if (!columns.includes('id')) {
-                    console.log('Recreating game_aliases table with proper structure...');
+        console.log('Recreating game_aliases table with proper structure...');
 
                     // Save existing data
                     const existingData = this.db.exec("SELECT game_id, alias FROM game_aliases");
@@ -543,7 +543,7 @@ class DatabaseManager {
             return true;
         } catch (error) {
             console.error('Error saving game alias:', error);
-            await debugLog('Error saving game alias', { error: error.message });
+            await window.debugLog('Error saving game alias', { error: error.message });
             return false;
         }
     }
@@ -581,7 +581,7 @@ class DatabaseManager {
             }
         } catch (error) {
             console.error('Error loading game data:', error);
-            await debugLog('Error loading game data', { error: error.message });
+            await window.debugLog('Error loading game data', { error: error.message });
         }
 
         return [];
@@ -715,7 +715,7 @@ class DatabaseManager {
             return games[0]?.values || [];
         } catch (error) {
             console.error('Error loading corrections games list:', error);
-            await debugLog('Error loading corrections games list', { error: error.message });
+            await window.debugLog('Error loading corrections games list', { error: error.message });
             return [];
         }
     }
@@ -787,7 +787,7 @@ class DatabaseManager {
             };
         } catch (error) {
             console.error('Error loading corrections for game:', error);
-            await debugLog('Error loading corrections for game', { error: error.message });
+            await window.debugLog('Error loading corrections for game', { error: error.message });
             return null;
         }
     }
@@ -836,7 +836,7 @@ class DatabaseManager {
             return true;
         } catch (error) {
             console.error('Error saving correction:', error);
-            await debugLog('Error saving correction', { error: error.message });
+            await window.debugLog('Error saving correction', { error: error.message });
             return false;
         }
     }
@@ -848,7 +848,7 @@ class DatabaseManager {
             return true;
         } catch (error) {
             console.error('Error deleting correction:', error);
-            await debugLog('Error deleting correction', { error: error.message });
+            await window.debugLog('Error deleting correction', { error: error.message });
             return false;
         }
     }

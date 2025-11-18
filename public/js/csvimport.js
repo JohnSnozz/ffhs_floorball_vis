@@ -25,9 +25,9 @@ class CSVImport {
     setupEventListeners() {
         const csvFileInput = document.getElementById('csv-file');
         if (csvFileInput) {
-            console.log('CSV file input found, adding event listener');
+        console.log('CSV file input found, adding event listener');
             csvFileInput.addEventListener('change', (e) => {
-                console.log('File selection changed:', e.target.files);
+        console.log('File selection changed:', e.target.files);
                 this.handleFileSelect(e);
             });
         } else {
@@ -36,9 +36,9 @@ class CSVImport {
 
         const importBtn = document.getElementById('import-btn');
         if (importBtn) {
-            console.log('Import button found, adding event listener');
+        console.log('Import button found, adding event listener');
             importBtn.addEventListener('click', () => {
-                console.log('Import button clicked');
+        console.log('Import button clicked');
                 this.importData();
             });
         } else {
@@ -56,7 +56,7 @@ class CSVImport {
         const file = event.target.files[0];
 
         if (!file) {
-            console.log('No file selected - returning');
+        console.log('No file selected - returning');
             debugLog('FILE SELECTION - No file selected');
             return;
         }
@@ -93,13 +93,13 @@ class CSVImport {
                     const team2 = parts[1];
                     gameName = `${team1} - ${team2}`;
                     document.getElementById('game-name').value = gameName;
-                    console.log('Auto-populated game name:', gameName);
+        console.log('Auto-populated game name:', gameName);
                 }
 
                 if (this.currentData.data.length > 0 && this.currentData.data[0]['Date']) {
                     const csvDate = this.currentData.data[0]['Date'];
                     document.getElementById('game-date').value = csvDate;
-                    console.log('Auto-populated game date:', csvDate);
+        console.log('Auto-populated game date:', csvDate);
                 }
 
                 this.showCSVPreview(this.currentData);
@@ -258,13 +258,13 @@ class CSVImport {
         }
 
         try {
-            console.log('Starting import process with duplicate detection...');
+        console.log('Starting import process with duplicate detection...');
 
             const firstRow = this.currentData.data[0];
             const team1 = firstRow['Team 1'];
             const team2 = firstRow['Team 2'];
 
-            console.log('Loading ALL existing shots from database for duplicate check...');
+        console.log('Loading ALL existing shots from database for duplicate check...');
             let allExistingShots = [];
             const allShotsResult = this.app.dbManager.db.exec(`SELECT * FROM shots`);
             if (allShotsResult.length > 0) {
@@ -277,19 +277,19 @@ class CSVImport {
                     return shot;
                 });
             }
-            console.log(`Found ${allExistingShots.length} total shots in database for duplicate checking`);
+        console.log(`Found ${allExistingShots.length} total shots in database for duplicate checking`);
 
             const existingShotHashes = new Set(allExistingShots.map(shot => this.generateShotHash(shot)));
-            console.log(`Generated ${existingShotHashes.size} unique hashes from all existing shots`);
+        console.log(`Generated ${existingShotHashes.size} unique hashes from all existing shots`);
 
             if (allExistingShots.length > 0) {
-                console.log('===== HASH DEBUG =====');
-                console.log('Sample DB shot raw data:', allExistingShots[0]);
-                console.log('Sample DB shot hash:', this.generateShotHash(allExistingShots[0]));
-                console.log('Sample CSV shot raw data:', this.currentData.data[0]);
-                console.log('Sample CSV shot hash:', this.generateShotHash(this.currentData.data[0]));
-                console.log('Hashes match?', this.generateShotHash(allExistingShots[0]) === this.generateShotHash(this.currentData.data[0]));
-                console.log('===== END HASH DEBUG =====');
+        console.log('===== HASH DEBUG =====');
+        console.log('Sample DB shot raw data:', allExistingShots[0]);
+        console.log('Sample DB shot hash:', this.generateShotHash(allExistingShots[0]));
+        console.log('Sample CSV shot raw data:', this.currentData.data[0]);
+        console.log('Sample CSV shot hash:', this.generateShotHash(this.currentData.data[0]));
+        console.log('Hashes match?', this.generateShotHash(allExistingShots[0]) === this.generateShotHash(this.currentData.data[0]));
+        console.log('===== END HASH DEBUG =====');
             }
 
             const existingGameResult = this.app.dbManager.db.exec(`
@@ -303,7 +303,7 @@ class CSVImport {
 
             if (existingGameResult.length > 0 && existingGameResult[0].values.length > 0) {
                 gameId = existingGameResult[0].values[0][0];
-                console.log(`Found existing game with ID: ${gameId}`);
+        console.log(`Found existing game with ID: ${gameId}`);
             } else {
                 this.app.dbManager.db.run(`
                     INSERT INTO games (game_name, game_date, team1, team2)
@@ -313,31 +313,31 @@ class CSVImport {
                 const gameResult = this.app.dbManager.db.exec("SELECT last_insert_rowid()");
                 gameId = gameResult[0].values[0][0];
                 isNewGame = true;
-                console.log(`Created new game with ID: ${gameId}`);
+        console.log(`Created new game with ID: ${gameId}`);
             }
 
             let uniqueCount = 0;
             let duplicateCount = 0;
 
-            console.log('===== STARTING DUPLICATE CHECK =====');
-            console.log('Total CSV rows to check:', this.currentData.data.length);
-            console.log('Total existing hashes:', existingShotHashes.size);
+        console.log('===== STARTING DUPLICATE CHECK =====');
+        console.log('Total CSV rows to check:', this.currentData.data.length);
+        console.log('Total existing hashes:', existingShotHashes.size);
 
             this.currentData.data.forEach((row, index) => {
                 const shotHash = this.generateShotHash(row);
 
                 if (index === 0) {
-                    console.log('First CSV shot hash:', shotHash);
-                    console.log('First CSV shot data:', row);
-                    console.log('Checking if hash exists in Set:', existingShotHashes.has(shotHash));
-                    console.log('First 3 existing hashes:', Array.from(existingShotHashes).slice(0, 3));
+        console.log('First CSV shot hash:', shotHash);
+        console.log('First CSV shot data:', row);
+        console.log('Checking if hash exists in Set:', existingShotHashes.has(shotHash));
+        console.log('First 3 existing hashes:', Array.from(existingShotHashes).slice(0, 3));
                 }
 
                 if (existingShotHashes.has(shotHash)) {
                     duplicateCount++;
-                    console.log(`DUPLICATE FOUND #${duplicateCount} - Skipping shot ${index + 1}`);
+        console.log(`DUPLICATE FOUND #${duplicateCount} - Skipping shot ${index + 1}`);
                     if (duplicateCount <= 3) {
-                        console.log('  Duplicate details:', {
+        console.log('  Duplicate details:', {
                             time: row['Time'],
                             shooter: row['Shooter'],
                             distance: row['Distance'],
@@ -351,7 +351,7 @@ class CSVImport {
                         const coords = this.app.calculateCoordinates(distance, angle);
 
                         if (index === 0) {
-                            console.log('First shot INSERT attempt - coords:', coords);
+        console.log('First shot INSERT attempt - coords:', coords);
                             debugLog('First shot INSERT attempt', {
                                 distance,
                                 angle,
@@ -411,7 +411,7 @@ class CSVImport {
                         uniqueCount++;
 
                         if (index === 0) {
-                            console.log('First shot INSERT succeeded');
+        console.log('First shot INSERT succeeded');
                             debugLog('First shot INSERT succeeded');
                         }
                     } catch (shotError) {
@@ -424,16 +424,16 @@ class CSVImport {
                 }
             });
 
-            console.log('===== IMPORT COMPLETE =====');
-            console.log(`Unique shots inserted: ${uniqueCount}`);
-            console.log(`Duplicate shots skipped: ${duplicateCount}`);
-            console.log(`Total CSV rows processed: ${this.currentData.data.length}`);
-            console.log('===========================');
+        console.log('===== IMPORT COMPLETE =====');
+        console.log(`Unique shots inserted: ${uniqueCount}`);
+        console.log(`Duplicate shots skipped: ${duplicateCount}`);
+        console.log(`Total CSV rows processed: ${this.currentData.data.length}`);
+        console.log('===========================');
 
             if (uniqueCount === 0 && duplicateCount > 0) {
                 if (isNewGame) {
                     this.app.dbManager.db.run(`DELETE FROM games WHERE game_id = ?`, [gameId]);
-                    console.log('Deleted empty game - all shots were duplicates');
+        console.log('Deleted empty game - all shots were duplicates');
                 }
                 this.app.showStatus(`Import aborted: All ${duplicateCount} shots already exist in database!`, 'error');
                 alert(`WARNUNG: Alle ${duplicateCount} Schüsse existieren bereits in der Datenbank!\n\nDiese Datei wurde bereits importiert.`);

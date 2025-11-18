@@ -92,7 +92,7 @@ class ShotDataImporter {
 
             UIManager.showDuplicateWarning(duplicateStats, importPlan, existingGameId);
         } catch (error) {
-            console.warn('Error in duplicate checking:', error);
+        console.warn('Error in duplicate checking:', error);
         }
     }
 

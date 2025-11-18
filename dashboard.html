@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="public/css/corrections.css">
     <link rel="stylesheet" href="public/css/dev-tools.css">
 
+    <!-- Responsive Scaling (can be removed to disable) -->
+    <link rel="stylesheet" href="public/css/responsive-scale.css">
+
     <!-- Auth header styles -->
     <style>
         .auth-header {
@@ -162,6 +165,8 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-hexbin@0.2.2/build/d3-hexbin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <!-- Responsive Scaling (can be removed to disable) -->
+    <script src="public/js/responsive-scale.js" defer></script>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -269,7 +274,7 @@
 
         // Initialize authentication on page load
         window.addEventListener('DOMContentLoaded', async function() {
-            console.log('Dashboard loading...');
+        console.log('Dashboard loading...');
 
             // Hide loading overlay after a short delay
             setTimeout(() => {
@@ -285,14 +290,14 @@
 
             // If admin, redirect to index.html (admin dashboard)
             if (adminToken || userRole === 'admin') {
-                console.log('Admin user detected, redirecting to index.html');
+        console.log('Admin user detected, redirecting to index.html');
                 window.location.href = '/';
                 return;
             }
 
             // If no access token, redirect to login
             if (!authToken) {
-                console.log('No token found, redirecting to login');
+        console.log('No token found, redirecting to login');
                 window.location.href = '/login.html';
                 return;
             }
@@ -306,19 +311,19 @@
                 });
 
                 if (!response.ok) {
-                    console.log('Token invalid, redirecting to login');
+        console.log('Token invalid, redirecting to login');
                     logout();
                     return;
                 }
 
                 const data = await response.json();
                 if (!data.valid) {
-                    console.log('Token not valid, redirecting to login');
+        console.log('Token not valid, redirecting to login');
                     logout();
                     return;
                 }
 
-                console.log('Authentication successful:', data);
+        console.log('Authentication successful:', data);
 
                 // Setup UI based on user type
                 setupUserInterface();

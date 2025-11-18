@@ -74,7 +74,7 @@ class GoalkeeperRadialChart {
         const angle = parseFloat(shot.angle);
 
         if (isNaN(angle)) {
-            console.log('Invalid angle:', shot);
+        console.log('Invalid angle:', shot);
             return null;
         }
 
@@ -134,7 +134,7 @@ class GoalkeeperRadialChart {
             .text('Save Rate by Angle');
 
         if (!this.currentGameData || this.currentGameData.length === 0) {
-            console.log('No game data');
+        console.log('No game data');
             return;
         }
 

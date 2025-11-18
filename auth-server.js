@@ -31,7 +31,7 @@ try {
         });
     }
 } catch (error) {
-    console.log('No .env file found, using defaults');
+        console.log('No .env file found, using defaults');
 }
 
 const port = process.env.PORT || 3000;
@@ -69,7 +69,7 @@ const adminCheck = db.prepare('SELECT id FROM admin_users WHERE username = ?').g
 if (!adminCheck) {
     const passwordHash = bcrypt.hashSync('changeme123', 10);
     db.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)').run('admin', passwordHash);
-    console.log('Created default admin: admin / changeme123');
+        console.log('Created default admin: admin / changeme123');
 }
 
 // Create sample access codes if none exist
@@ -888,11 +888,11 @@ Bun.serve({
                     let attempts = 0;
                     const addAdminMenuItems = () => {
                         attempts++;
-                        console.log('Attempting to add admin menu items, attempt:', attempts);
+        console.log('Attempting to add admin menu items, attempt:', attempts);
 
                         // Find all dropdown menus
                         const dropdownMenus = document.querySelectorAll('.dropdown-menu');
-                        console.log('Found dropdown menus:', dropdownMenus.length);
+        console.log('Found dropdown menus:', dropdownMenus.length);
 
                         if (dropdownMenus.length === 0 && attempts < 20) {
                             // Try again if no menus found yet
@@ -901,11 +901,11 @@ Bun.serve({
                         }
 
                         dropdownMenus.forEach((menu, index) => {
-                            console.log('Processing menu', index, menu);
+        console.log('Processing menu', index, menu);
 
                             // Check if we already added the items
                             if (menu.querySelector('.admin-token-item')) {
-                                console.log('Admin items already added to menu', index);
+        console.log('Admin items already added to menu', index);
                                 return;
                             }
 
@@ -950,7 +950,7 @@ Bun.serve({
                             };
                             menu.appendChild(logoutButton);
 
-                            console.log('Added admin items to menu', index);
+        console.log('Added admin items to menu', index);
                         });
 
                         // Ensure hamburger menus stay visible for admin
@@ -1080,14 +1080,14 @@ Bun.serve({
 });
 
 // Show startup info
-console.log(`\n${'='.repeat(50)}`);
-console.log('FLOORBALL DASHBOARD WITH AUTHENTICATION');
-console.log('='.repeat(50));
-console.log(`\nServer: http://localhost:${port}`);
-console.log(`Login: http://localhost:${port}/login`);
-console.log('\nCredentials:');
-console.log('  Admin: admin / changeme123');
-console.log('  Viewer (season): TEST01');
-console.log('  Viewer (single game): GAME01');
-console.log('\n' + '='.repeat(50));
-console.log('Press Ctrl+C to stop\n');
+        console.log(`\n${'='.repeat(50)}`);
+        console.log('FLOORBALL DASHBOARD WITH AUTHENTICATION');
+        console.log('='.repeat(50));
+        console.log(`\nServer: http://localhost:${port}`);
+        console.log(`Login: http://localhost:${port}/login`);
+        console.log('\nCredentials:');
+        console.log('  Admin: admin / changeme123');
+        console.log('  Viewer (season): TEST01');
+        console.log('  Viewer (single game): GAME01');
+        console.log('\n' + '='.repeat(50));
+        console.log('Press Ctrl+C to stop\n');

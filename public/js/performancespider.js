@@ -37,12 +37,12 @@ class PerformanceSpider {
         console.log('=== SPIDER DIAGRAM DEBUG ===');
         console.log('Player metrics:', playerMetrics);
         if (teamMetrics) {
-            console.log('Team metrics:', teamMetrics);
-            console.log('Comparison:');
-            console.log(`  Corsi: Player ${playerMetrics.corsi.toFixed(1)} vs Team ${teamMetrics.corsi.toFixed(1)}`);
-            console.log(`  Fenwick: Player ${playerMetrics.fenwick.toFixed(1)} vs Team ${teamMetrics.fenwick.toFixed(1)}`);
-            console.log(`  xG +/-: Player ${playerMetrics.xGPlusMinus.toFixed(1)} vs Team ${teamMetrics.xGPlusMinus.toFixed(1)}`);
-            console.log(`  xSOG +/-: Player ${playerMetrics.xSOGPlusMinus.toFixed(1)} vs Team ${teamMetrics.xSOGPlusMinus.toFixed(1)}`);
+        console.log('Team metrics:', teamMetrics);
+        console.log('Comparison:');
+        console.log(`  Corsi: Player ${playerMetrics.corsi.toFixed(1)} vs Team ${teamMetrics.corsi.toFixed(1)}`);
+        console.log(`  Fenwick: Player ${playerMetrics.fenwick.toFixed(1)} vs Team ${teamMetrics.fenwick.toFixed(1)}`);
+        console.log(`  xG +/-: Player ${playerMetrics.xGPlusMinus.toFixed(1)} vs Team ${teamMetrics.xGPlusMinus.toFixed(1)}`);
+        console.log(`  xSOG +/-: Player ${playerMetrics.xSOGPlusMinus.toFixed(1)} vs Team ${teamMetrics.xSOGPlusMinus.toFixed(1)}`);
         }
 
         const axes = [
@@ -82,7 +82,7 @@ class PerformanceSpider {
                 const absMax = Math.max(Math.abs(dataMin), Math.abs(dataMax)) * 1.2;
                 axis.min = -absMax;
                 axis.max = absMax;
-                console.log(`${axis.label}: min=${axis.min.toFixed(1)}, max=${axis.max.toFixed(1)}, dataMin=${dataMin.toFixed(1)}, dataMax=${dataMax.toFixed(1)}`);
+        console.log(`${axis.label}: min=${axis.min.toFixed(1)}, max=${axis.max.toFixed(1)}, dataMin=${dataMin.toFixed(1)}, dataMax=${dataMax.toFixed(1)}`);
             }
         });
 

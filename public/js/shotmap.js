@@ -17,10 +17,10 @@ class ShotMap {
         const goals = data.filter(s => s.result === 'Goal');
         console.log('Goals in shotmap data:', goals.length);
         goals.forEach(g => {
-            console.log(`  Goal by ${g.shooter}: x=${g.x_graph}, y=${g.y_graph}, shot_id=${g.shot_id}`);
+        console.log(`  Goal by ${g.shooter}: x=${g.x_graph}, y=${g.y_graph}, shot_id=${g.shot_id}`);
         });
 
-        await debugLog('Creating shot map', { dataLength: data.length, hasOnFieldData: !!onFieldData });
+        await window.debugLog('Creating shot map', { dataLength: data.length, hasOnFieldData: !!onFieldData });
 
         if (!window.hexbinTracking) {
             window.hexbinTracking = {
@@ -49,9 +49,9 @@ class ShotMap {
 
         console.log(`Filtered shots: ${filteredData.length} (excluded ${data.length - filteredData.length} possession shots)`);
         if (filteredOnFieldData) {
-            console.log(`Filtered on-field shots: ${filteredOnFieldData.length}`);
+        console.log(`Filtered on-field shots: ${filteredOnFieldData.length}`);
         }
-        await debugLog('Shot map filter', {
+        await window.debugLog('Shot map filter', {
             total: data.length,
             filtered: filteredData.length,
             excluded: data.length - filteredData.length,
@@ -103,7 +103,7 @@ class ShotMap {
         if (fieldContainer) {
             fieldContainer.style.width = `${totalSVGWidth}px`;
             fieldContainer.style.maxWidth = `${totalSVGWidth}px`;
-            console.log(`Set .field-container width to ${totalSVGWidth}px`);
+        console.log(`Set .field-container width to ${totalSVGWidth}px`);
         }
 
         if (chartSection) {
@@ -136,7 +136,7 @@ class ShotMap {
             goalkeeperSection.style.left = `${goalkeeperLeft}px`;
             goalkeeperSection.style.right = 'auto';
 
-            console.log('Container positions with equal gaps:', {
+        console.log('Container positions with equal gaps:', {
                 gap: gap,
                 fieldLeft: fieldLeft,
                 analyticsLeft: analyticsLeft,
@@ -179,7 +179,7 @@ class ShotMap {
 
             // Include shots with valid coordinates, but ALWAYS include goals
             if (isGoal && !hasValidCoords) {
-                console.log(`Goal without valid coordinates found: shooter=${shot.shooter}, x=${shot.x_graph}, y=${shot.y_graph}`);
+        console.log(`Goal without valid coordinates found: shooter=${shot.shooter}, x=${shot.x_graph}, y=${shot.y_graph}`);
             }
 
             return hasValidCoords || isGoal;
@@ -202,7 +202,7 @@ class ShotMap {
                     visualX = 300 * scaleX;  // Center x
                     visualY = 100 * scaleY;  // Near own goal (flipped)
                 }
-                console.log(`Shot without coordinates (${shot.shooter}, result: ${shot.result}), using default position`);
+        console.log(`Shot without coordinates (${shot.shooter}, result: ${shot.result}), using default position`);
             } else {
                 if (isTeam1) {
                     visualX = x * scaleX;
@@ -227,10 +227,10 @@ class ShotMap {
         const goalsWithCoords = shotsWithCoords.filter(s => s.result === 'Goal');
         console.log('Goals after coordinate processing:', goalsWithCoords.length);
         goalsWithCoords.forEach(g => {
-            console.log(`  Goal by ${g.shooter}: visualX=${g.visualX?.toFixed(1)}, visualY=${g.visualY?.toFixed(1)}`);
+        console.log(`  Goal by ${g.shooter}: visualX=${g.visualX?.toFixed(1)}, visualY=${g.visualY?.toFixed(1)}`);
         });
 
-        await debugLog('Shots with coordinates', {
+        await window.debugLog('Shots with coordinates', {
             count: shotsWithCoords.length,
             sampleShot: shotsWithCoords[0] ? {
                 team1: shotsWithCoords[0].team1,
@@ -296,7 +296,7 @@ class ShotMap {
                     isTeam1: isTeam1
                 };
             });
-            console.log(`On-field shots with coords: ${onFieldShotsWithCoords.length}`);
+        console.log(`On-field shots with coords: ${onFieldShotsWithCoords.length}`);
         }
 
         const heatmapGroup = g.append('g')
@@ -314,16 +314,16 @@ class ShotMap {
             // Removed clip-paths - we show all shots regardless of field position
             // This ensures shots from defensive zone (like Fontana's empty netter) are visible
 
-            console.log(`Creating split hexbins:`);
-            console.log(`- Upper (shooter's shots): ${shotsWithCoords.length}`);
-            console.log(`- Lower (on-field shots): ${onFieldShotsWithCoords.length}`);
+        console.log(`Creating split hexbins:`);
+        console.log(`- Upper (shooter's shots): ${shotsWithCoords.length}`);
+        console.log(`- Lower (on-field shots): ${onFieldShotsWithCoords.length}`);
 
             if (shotsWithCoords.length > 0) {
-                console.log('Drawing shooter hexbins in upper half...');
+        console.log('Drawing shooter hexbins in upper half...');
                 this.createHexbinHeatmap(upperGroup, shotsWithCoords, fieldWidth, fieldHeight);
             }
             if (onFieldShotsWithCoords.length > 0) {
-                console.log('Drawing on-field hexbins in lower half...');
+        console.log('Drawing on-field hexbins in lower half...');
                 this.createHexbinHeatmap(lowerGroup, onFieldShotsWithCoords, fieldWidth, fieldHeight);
             }
         } else {
@@ -427,12 +427,12 @@ class ShotMap {
         this.app.shotHistogram.createXGHistograms(filteredData, fieldWidth, fieldHeight, margin);
 
         console.log('Shot map created with dots and heatmap');
-        await debugLog('Shot map complete', { dotsDrawn: shotsWithCoords.length });
+        await window.debugLog('Shot map complete', { dotsDrawn: shotsWithCoords.length });
     }
 
     async createScatterShotMap(g, shotData, width, height) {
         console.log('Creating scatter plot shot map');
-        await debugLog('Creating scatter plot shot map', { shotCount: shotData.length });
+        await window.debugLog('Creating scatter plot shot map', { shotCount: shotData.length });
 
         const colorScale = d3.scaleOrdinal()
             .domain(['Goal', 'Saved', 'Missed', 'Blocked'])
@@ -655,7 +655,7 @@ class ShotMap {
         console.log(`createSplitViewHexbins: ${position} with ${shotsWithCoords.length} shots`);
 
         if (!d3.hexbin) {
-            console.warn('d3-hexbin not available');
+        console.warn('d3-hexbin not available');
             return;
         }
 
@@ -677,7 +677,7 @@ class ShotMap {
         });
 
         if (remappedShots.length > 0) {
-            console.log(`${position} shots coordinate sample:`, {
+        console.log(`${position} shots coordinate sample:`, {
                 first: {
                     x: remappedShots[0].visualX.toFixed(1),
                     originalY: remappedShots[0].originalY.toFixed(1),
@@ -826,10 +826,10 @@ class ShotMap {
 
         if (filteredHexData.length > 0) {
             const sample = filteredHexData[0];
-            console.log(`${position} HEXBIN DEBUG: First hexbin at (${sample.x.toFixed(1)}, ${sample.y.toFixed(1)}), fieldHeight=${fieldHeight.toFixed(1)}, halfHeight=${halfHeight.toFixed(1)}`);
+        console.log(`${position} HEXBIN DEBUG: First hexbin at (${sample.x.toFixed(1)}, ${sample.y.toFixed(1)}), fieldHeight=${fieldHeight.toFixed(1)}, halfHeight=${halfHeight.toFixed(1)}`);
 
             const yValues = filteredHexData.map(h => h.y);
-            console.log(`${position} Y-RANGE: ${Math.min(...yValues).toFixed(1)} to ${Math.max(...yValues).toFixed(1)}`);
+        console.log(`${position} Y-RANGE: ${Math.min(...yValues).toFixed(1)} to ${Math.max(...yValues).toFixed(1)}`);
         }
 
         if (this.app.selectedShooter && window.hexbinDebugData['all_shooters_none']) {
@@ -843,7 +843,7 @@ class ShotMap {
         const selectedLowerData = window.hexbinDebugData[`lower_${this.app.selectedShooter}`];
 
         if (!allShootersData || !selectedUpperData) {
-            await debugLog('Hexbin comparison - missing data', {
+            await window.debugLog('Hexbin comparison - missing data', {
                 hasAllShooters: !!allShootersData,
                 hasSelectedUpper: !!selectedUpperData
             });
@@ -934,7 +934,7 @@ class ShotMap {
             });
 
             if (response.ok) {
-                console.log('Hexbin comparison data written to log file');
+        console.log('Hexbin comparison data written to log file');
                 await this.writeHexbinAnalysisFile(logData);
             }
         } catch (error) {
@@ -944,7 +944,7 @@ class ShotMap {
 
     compareHexbinPositions() {
         if (!window.hexbinTracking.allShooters || !window.hexbinTracking.selectedShooter) {
-            console.log('Missing tracking data for comparison');
+        console.log('Missing tracking data for comparison');
             return;
         }
 
@@ -1041,10 +1041,10 @@ class ShotMap {
                 });
             }
 
-            console.log(`Shot ${shotId.substring(0, 30)}...`);
-            console.log(`  All Shooters: Hexbin (${allPos.hexbinX.toFixed(1)}, ${allPos.hexbinY.toFixed(1)}), Scale: ${allPos.hexbinScale.toFixed(2)}`);
-            console.log(`  Selected:     Hexbin (${selPos.hexbinX.toFixed(1)}, ${selPos.hexbinY.toFixed(1)}), Scale: ${selPos.hexbinScale.toFixed(2)}`);
-            console.log(`  Delta:        X: ${deltaX.toFixed(1)}, Y: ${deltaY.toFixed(1)}, Scale Ratio: ${scaleRatio.toFixed(2)}`);
+        console.log(`Shot ${shotId.substring(0, 30)}...`);
+        console.log(`  All Shooters: Hexbin (${allPos.hexbinX.toFixed(1)}, ${allPos.hexbinY.toFixed(1)}), Scale: ${allPos.hexbinScale.toFixed(2)}`);
+        console.log(`  Selected:     Hexbin (${selPos.hexbinX.toFixed(1)}, ${selPos.hexbinY.toFixed(1)}), Scale: ${selPos.hexbinScale.toFixed(2)}`);
+        console.log(`  Delta:        X: ${deltaX.toFixed(1)}, Y: ${deltaY.toFixed(1)}, Scale Ratio: ${scaleRatio.toFixed(2)}`);
         });
 
         debugLog('HEXBIN_COMPARISON_DETAILS', {
@@ -1055,12 +1055,12 @@ class ShotMap {
         });
 
         if (discrepancies.length > 0) {
-            console.log('\nDISCREPANCIES FOUND:');
-            console.log(`${discrepancies.length} shots have different hexbin positions`);
+        console.log('\nDISCREPANCIES FOUND:');
+        console.log(`${discrepancies.length} shots have different hexbin positions`);
 
             const avgDeltaX = discrepancies.reduce((sum, d) => sum + d.deltaX, 0) / discrepancies.length;
             const avgDeltaY = discrepancies.reduce((sum, d) => sum + d.deltaY, 0) / discrepancies.length;
-            console.log(`Average position difference: X: ${avgDeltaX.toFixed(1)}, Y: ${avgDeltaY.toFixed(1)}`);
+        console.log(`Average position difference: X: ${avgDeltaX.toFixed(1)}, Y: ${avgDeltaY.toFixed(1)}`);
         }
 
         this.writeHexbinTrackingLog({
@@ -1112,7 +1112,7 @@ class ShotMap {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(logContent)
             });
-            console.log('Hexbin tracking log written to file');
+        console.log('Hexbin tracking log written to file');
         } catch (error) {
             console.error('Failed to write tracking log:', error);
         }
@@ -1189,7 +1189,7 @@ class ShotMap {
         console.log(`createSplitHexbinHeatmap: ${shotsWithCoords.length} shots, yOffset=${yOffset}`);
 
         if (!d3.hexbin) {
-            console.warn('d3-hexbin not available, skipping');
+        console.warn('d3-hexbin not available, skipping');
             return;
         }
 
@@ -1208,9 +1208,9 @@ class ShotMap {
 
                 // Debug: Log hexbins with goals
                 if (goals > 0) {
-                    console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
+        console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
                     bin.filter(d => d.result === 'Goal').forEach(g => {
-                        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
+        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
                     });
                 }
 
@@ -1327,7 +1327,7 @@ class ShotMap {
                         .style('opacity', 0);
                 });
 
-            console.log(`Created ${hexagons.size()} hexagons in split view`);
+        console.log(`Created ${hexagons.size()} hexagons in split view`);
 
         } catch (error) {
             console.error('Error creating split hexbin heatmap:', error);
@@ -1347,7 +1347,7 @@ class ShotMap {
 
         if (!d3.hexbin) {
             const errorMsg = 'd3-hexbin not available, using fallback grid heatmap';
-            console.warn(errorMsg);
+        console.warn(errorMsg);
             heatmapLog.push(`WARNING: ${errorMsg}`);
             debugLog('Heatmap Warning - Using fallback', { logs: heatmapLog });
 
@@ -1372,9 +1372,9 @@ class ShotMap {
 
                 // Debug: Log hexbins with goals
                 if (goals > 0) {
-                    console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
+        console.log(`Hexbin with ${goals} goal(s) out of ${total} shots (${(successRate*100).toFixed(1)}%)`);
                     bin.filter(d => d.result === 'Goal').forEach(g => {
-                        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
+        console.log(`  - Goal by ${g.shooter} at (${g.visualX?.toFixed(1)}, ${g.visualY?.toFixed(1)})`);
                     });
                 }
 
@@ -1485,7 +1485,7 @@ class ShotMap {
                 }))
             };
 
-            console.log(`Stored hexbin debug data for ${hexbinDebugKey}:`, {
+        console.log(`Stored hexbin debug data for ${hexbinDebugKey}:`, {
                 numHexbins: filteredHexData.length,
                 radius: 28 * scaleFactor,
                 fieldDimensions: `${width} x ${height}`,
@@ -1579,7 +1579,7 @@ class ShotMap {
         console.log(`Highlighting hexbins with xG range ${xgMin.toFixed(2)}-${xgMax.toFixed(2)} for ${teamClass}`);
 
         if (!this.shotMapSvg) {
-            console.warn('Shot map SVG not found');
+        console.warn('Shot map SVG not found');
             return;
         }
         const hexagons = this.shotMapSvg.selectAll('.hexagon');
@@ -1653,7 +1653,7 @@ class ShotMap {
         console.log('Resetting hexbin highlighting');
 
         if (!this.shotMapSvg) {
-            console.warn('Shot map SVG not found');
+        console.warn('Shot map SVG not found');
             return;
         }
 

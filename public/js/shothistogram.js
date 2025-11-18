@@ -24,7 +24,7 @@ class ShotHistogram {
         console.log('Unique shooting teams:', uniqueShootingTeams);
 
         if (uniqueShootingTeams.length === 0) {
-            console.log('No teams found for histogram');
+        console.log('No teams found for histogram');
             return;
         }
 
@@ -58,12 +58,12 @@ class ShotHistogram {
 
             team2FullShots = this.app.currentGameData.filter(d => d.shooting_team && d.shooting_team !== team1Name);
 
-            console.log(`Selected shooter: ${team1}`);
-            console.log(`Current game ID: ${this.app.currentGameId}`);
-            console.log(`Shooter's shots: ${team1Shots.length}`);
-            console.log(`Team shots (background - white outline): ${team1FullShots.length}`);
-            console.log(`Opponent shots when ${team1} defending: ${team2Shots.length}`);
-            console.log(`All opponent shots (background - white outline): ${team2FullShots.length}`);
+        console.log(`Selected shooter: ${team1}`);
+        console.log(`Current game ID: ${this.app.currentGameId}`);
+        console.log(`Shooter's shots: ${team1Shots.length}`);
+        console.log(`Team shots (background - white outline): ${team1FullShots.length}`);
+        console.log(`Opponent shots when ${team1} defending: ${team2Shots.length}`);
+        console.log(`All opponent shots (background - white outline): ${team2FullShots.length}`);
         } else if (this.app.currentGameId === 'all') {
             const allTeamsUnfiltered = [...new Set(this.app.currentGameData.map(d => d.shooting_team))].filter(t => t);
             team1 = allTeamsUnfiltered[0];
@@ -104,9 +104,9 @@ class ShotHistogram {
         let sharedYMax = null;
         if (!this.app.selectedShooter) {
             sharedYMax = this.calculateSharedYMax(team1Shots, team2Shots);
-            console.log(`Shared Y max for team comparison: ${sharedYMax}`);
+        console.log(`Shared Y max for team comparison: ${sharedYMax}`);
         } else {
-            console.log(`Player selected - using independent Y scales for each histogram`);
+        console.log(`Player selected - using independent Y scales for each histogram`);
         }
 
         if (this.app.selectedShooter) {
@@ -179,11 +179,11 @@ class ShotHistogram {
                 return playerOnField;
             });
 
-            console.log(`Shots while ${playerName} on ice: ${teamShotsWhilePlayerOnIce.length}`);
+        console.log(`Shots while ${playerName} on ice: ${teamShotsWhilePlayerOnIce.length}`);
             const playerTeamName = playerPersonalShots[0]?.shooting_team || team1Shots[0]?.shooting_team;
             const teamShotsWhileOnIce = teamShotsWhilePlayerOnIce.filter(d => d.shooting_team === playerTeamName).length;
             const oppShotsWhileOnIce = teamShotsWhilePlayerOnIce.filter(d => d.shooting_team !== playerTeamName).length;
-            console.log(`  Team shots: ${teamShotsWhileOnIce}, Opponent shots: ${oppShotsWhileOnIce}`);
+        console.log(`  Team shots: ${teamShotsWhileOnIce}, Opponent shots: ${oppShotsWhileOnIce}`);
 
             spiderPlayerData = { shots: playerPersonalShots, allShots: teamShotsWhilePlayerOnIce };
             spiderTeamData = { shots: team1FullShots, allShots: [...team1FullShots, ...team2FullShots] };
@@ -343,7 +343,7 @@ class ShotHistogram {
         console.log(`Y-axis max for ${teamName}: ${yMax} (sharedYMax: ${sharedYMax})`);
 
         if (!yMax || yMax === 0) {
-            console.warn(`No valid yMax for histogram ${teamName}, using default of 10`);
+        console.warn(`No valid yMax for histogram ${teamName}, using default of 10`);
         }
 
         const y = d3.scaleLinear()
@@ -521,7 +521,7 @@ class ShotHistogram {
         const playerShots = this.app.currentGameData.filter(d => d.shooter === playerName);
 
         if (playerShots.length === 0) {
-            console.log(`No shots found for player: ${playerName}`);
+        console.log(`No shots found for player: ${playerName}`);
             return;
         }
 
