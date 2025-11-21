@@ -335,7 +335,7 @@
 .dashboard-content #filter-shooter,
 #filter-shooter {
     flex: 1 1 auto;
-    min-height: 400px;
+    min-height: 595px;
     max-height: 100%;
     height: 100%;
     font-size: 1.1rem !important;
@@ -351,7 +351,7 @@
 #filter-shooter option {
     background-color: #1A1A1D;
     color: rgba(255, 255, 255, 0.9);
-    padding: 12px 8px !important;
+    padding: 2px 8px !important;
     font-size: 1.1rem !important;
     line-height: 1.6 !important;
 }

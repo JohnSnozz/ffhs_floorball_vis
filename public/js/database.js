@@ -529,18 +529,31 @@ class DatabaseManager {
     // Game management methods
     async loadGamesList() {
         try {
-            const games = this.db.exec("SELECT game_id, game_name, game_date, team1, team2 FROM games ORDER BY game_date DESC, game_name");
-            const aliases = this.db.exec("SELECT game_id, alias FROM game_aliases");
+            const games = this.db.exec(`
+                SELECT g.game_id, g.game_name, g.game_date, g.team1, g.team2, ga.alias
+                FROM games g
+                LEFT JOIN game_aliases ga ON g.game_id = ga.game_id
+                ORDER BY
+                    CASE WHEN ga.alias IS NULL OR ga.alias = '' THEN 1 ELSE 0 END,
+                    ga.alias DESC,
+                    g.game_name ASC,
+                    g.game_date ASC
+            `);
 
             const aliasMap = {};
-            if (aliases.length > 0) {
-                aliases[0].values.forEach(([gameId, alias]) => {
-                    aliasMap[gameId] = alias;
+            const gamesList = [];
+
+            if (games.length > 0 && games[0].values) {
+                games[0].values.forEach(([gameId, gameName, gameDate, team1, team2, alias]) => {
+                    gamesList.push([gameId, gameName, gameDate, team1, team2]);
+                    if (alias) {
+                        aliasMap[gameId] = alias;
+                    }
                 });
             }
 
             return {
-                games: games[0]?.values || [],
+                games: gamesList,
                 aliases: aliasMap
             };
         } catch (error) {
