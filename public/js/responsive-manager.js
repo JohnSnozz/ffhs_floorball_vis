@@ -217,13 +217,15 @@ class ResponsiveManager {
     updateVisualizations() {
         // Wait for app to be available
         setTimeout(() => {
-            // Force shot map to recalculate if it exists
-            if (window.app && window.app.shotMap) {
+            // Only try to update shot map if we're on a page that has one
+            // Check if shot map container exists before trying to update
+            const shotMapContainer = document.querySelector('.shot-map-container, #shot-map');
+            if (shotMapContainer && window.app && window.app.shotMap) {
                 try {
                     // Trigger the shot map's update
                     window.app.shotMap.updateVisualization();
                 } catch (e) {
-                    console.log('Shot map not ready yet');
+                    // Silently fail if shot map update fails
                 }
             }
 
@@ -235,7 +237,7 @@ class ResponsiveManager {
                 try {
                     window.app.applyFilters();
                 } catch (e) {
-                    console.log('Filters not ready yet');
+                    // Silently fail if filters not ready
                 }
             }
         }, 200);

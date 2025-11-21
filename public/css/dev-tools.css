@@ -345,3 +345,109 @@ body.dev-containers-visible .goalkeeper-quadrant-container::before {
     z-index: 10010;
     border: 2px solid #000;
 }
+
+/* CORRECTIONS PAGE CONTAINERS */
+body.dev-containers-visible .corrections-content {
+    outline: 4px solid rgba(255, 0, 255, 1) !important;
+}
+
+body.dev-containers-visible .corrections-content::after {
+    content: '.corrections-content';
+    position: fixed;
+    top: 490px;
+    right: 10px;
+    background: rgba(255, 0, 255, 1);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .corrections-controls {
+    outline: 3px solid rgba(0, 255, 255, 1) !important;
+}
+
+body.dev-containers-visible .corrections-controls::after {
+    content: '.corrections-controls';
+    position: fixed;
+    top: 520px;
+    right: 10px;
+    background: rgba(0, 255, 255, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .corrections-table-container {
+    outline: 3px solid rgba(255, 255, 0, 1) !important;
+}
+
+body.dev-containers-visible .corrections-table-container::after {
+    content: '.corrections-table-container';
+    position: fixed;
+    top: 550px;
+    right: 10px;
+    background: rgba(255, 255, 0, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .corrections-table-wrapper {
+    outline: 3px solid rgba(0, 255, 127, 1) !important;
+}
+
+body.dev-containers-visible .corrections-table-wrapper::after {
+    content: '.corrections-table-wrapper (scrollable)';
+    position: fixed;
+    top: 580px;
+    right: 10px;
+    background: rgba(0, 255, 127, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}
+
+body.dev-containers-visible .filter-controls {
+    outline: 2px dashed rgba(255, 127, 0, 1) !important;
+}
+
+body.dev-containers-visible .filter-controls::after {
+    content: '.filter-controls';
+    position: fixed;
+    top: 610px;
+    right: 10px;
+    background: rgba(255, 127, 0, 1);
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10010;
+    border: 2px solid #000;
+}

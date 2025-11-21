@@ -117,15 +117,30 @@ class DatabaseManager {
             CREATE TABLE IF NOT EXISTS shot_corrections (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 shot_id INTEGER NOT NULL UNIQUE,
-                corrected_shooter TEXT,
-                corrected_assisted_by TEXT,
-                corrected_shot_type TEXT,
-                corrected_shot_result TEXT,
-                corrected_defender TEXT,
-                corrected_is_direct BOOLEAN,
-                corrected_is_one_timer BOOLEAN,
-                corrected_is_rebound BOOLEAN,
+                time INTEGER,
+                shooter TEXT,
+                passer TEXT,
+                result TEXT,
+                type TEXT,
                 is_turnover BOOLEAN,
+                shooting_team TEXT,
+                t1lw TEXT,
+                t1c TEXT,
+                t1rw TEXT,
+                t1ld TEXT,
+                t1rd TEXT,
+                t1g TEXT,
+                t1x TEXT,
+                t2lw TEXT,
+                t2c TEXT,
+                t2rw TEXT,
+                t2ld TEXT,
+                t2rd TEXT,
+                t2g TEXT,
+                t2x TEXT,
+                pp BOOLEAN,
+                sh BOOLEAN,
+                is_hidden BOOLEAN DEFAULT 0,
                 corrected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (shot_id) REFERENCES shots(shot_id) ON DELETE CASCADE
             );
@@ -253,27 +268,100 @@ class DatabaseManager {
                     CREATE TABLE IF NOT EXISTS shot_corrections (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         shot_id INTEGER NOT NULL UNIQUE,
-                        corrected_shooter TEXT,
-                        corrected_assisted_by TEXT,
-                        corrected_shot_type TEXT,
-                        corrected_shot_result TEXT,
-                        corrected_defender TEXT,
-                        corrected_is_direct BOOLEAN,
-                        corrected_is_one_timer BOOLEAN,
-                        corrected_is_rebound BOOLEAN,
+                        time INTEGER,
+                        shooter TEXT,
+                        passer TEXT,
+                        result TEXT,
+                        type TEXT,
                         is_turnover BOOLEAN,
+                        shooting_team TEXT,
+                        t1lw TEXT,
+                        t1c TEXT,
+                        t1rw TEXT,
+                        t1ld TEXT,
+                        t1rd TEXT,
+                        t1g TEXT,
+                        t1x TEXT,
+                        t2lw TEXT,
+                        t2c TEXT,
+                        t2rw TEXT,
+                        t2ld TEXT,
+                        t2rd TEXT,
+                        t2g TEXT,
+                        t2x TEXT,
+                        pp BOOLEAN,
+                        sh BOOLEAN,
+                        is_hidden BOOLEAN DEFAULT 0,
                         corrected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (shot_id) REFERENCES shots(shot_id) ON DELETE CASCADE
                     );
                 `);
             } else {
-                // Check if is_turnover column exists
+                // Check if shot_corrections has the new schema
                 const correctionTableInfo = this.db.exec("PRAGMA table_info(shot_corrections)");
                 if (correctionTableInfo.length > 0) {
                     const correctionColumns = correctionTableInfo[0].values.map(col => col[1]);
-                    if (!correctionColumns.includes('is_turnover')) {
-        console.log('Adding is_turnover column to shot_corrections...');
-                        this.db.run("ALTER TABLE shot_corrections ADD COLUMN is_turnover BOOLEAN DEFAULT 0");
+
+                    // Check if we have the old schema (corrected_shooter, etc.)
+                    const hasOldSchema = correctionColumns.includes('corrected_shooter') ||
+                                        correctionColumns.includes('corrected_assisted_by');
+
+                    // Check if we're missing new columns
+                    const missingColumns = [];
+                    const requiredColumns = ['time', 'shooter', 'passer', 'result', 'type', 'is_turnover',
+                                            'shooting_team', 't1lw', 't1c', 't1rw', 't1ld', 't1rd', 't1g', 't1x',
+                                            't2lw', 't2c', 't2rw', 't2ld', 't2rd', 't2g', 't2x', 'pp', 'sh', 'is_hidden'];
+
+                    requiredColumns.forEach(col => {
+                        if (!correctionColumns.includes(col)) {
+                            missingColumns.push(col);
+                        }
+                    });
+
+                    if (hasOldSchema || missingColumns.length > 0) {
+        console.log('Migrating shot_corrections table to new schema...');
+
+                        // Backup existing corrections if any
+                        const existingCorrections = this.db.exec("SELECT * FROM shot_corrections");
+
+                        // Drop old table
+                        this.db.run("DROP TABLE IF EXISTS shot_corrections");
+
+                        // Recreate with new schema
+                        this.db.run(`
+                            CREATE TABLE shot_corrections (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                shot_id INTEGER NOT NULL UNIQUE,
+                                time INTEGER,
+                                shooter TEXT,
+                                passer TEXT,
+                                result TEXT,
+                                type TEXT,
+                                is_turnover BOOLEAN,
+                                shooting_team TEXT,
+                                t1lw TEXT,
+                                t1c TEXT,
+                                t1rw TEXT,
+                                t1ld TEXT,
+                                t1rd TEXT,
+                                t1g TEXT,
+                                t1x TEXT,
+                                t2lw TEXT,
+                                t2c TEXT,
+                                t2rw TEXT,
+                                t2ld TEXT,
+                                t2rd TEXT,
+                                t2g TEXT,
+                                t2x TEXT,
+                                pp BOOLEAN,
+                                sh BOOLEAN,
+                                is_hidden BOOLEAN DEFAULT 0,
+                                corrected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (shot_id) REFERENCES shots(shot_id) ON DELETE CASCADE
+                            );
+                        `);
+
+        console.log('Shot_corrections table migration completed');
                     }
                 }
             }
@@ -305,6 +393,7 @@ class DatabaseManager {
             this.db.run("DROP VIEW IF EXISTS shots_view");
 
             // Create view that combines shots with corrections - matching existing database
+            // Hidden shots (is_hidden = 1) are excluded from the view
             this.db.run(`
                 CREATE VIEW shots_view AS
                 SELECT
@@ -316,15 +405,12 @@ class DatabaseManager {
                     COALESCE(c.shooting_team, s.shooting_team) as shooting_team,
                     COALESCE(c.result, s.result) as result,
                     CASE
-                        WHEN c.shot_id IS NOT NULL THEN
-                            CASE
-                                WHEN c.is_turnover = 1 THEN 'Turnover | ' || COALESCE(c.type, s.type)
-                                ELSE COALESCE(c.type, s.type)
-                            END
+                        WHEN c.shot_id IS NOT NULL AND c.is_turnover = 1 THEN 'Turnover | ' || COALESCE(c.type, s.type)
+                        WHEN c.shot_id IS NOT NULL THEN COALESCE(c.type, s.type)
                         ELSE s.type
                     END as type,
-                    COALESCE(c.xg, s.xg) as xg,
-                    COALESCE(c.xgot, s.xgot) as xgot,
+                    s.xg as xg,
+                    s.xgot as xgot,
                     COALESCE(c.shooter, s.shooter) as shooter,
                     COALESCE(c.passer, s.passer) as passer,
                     COALESCE(c.t1lw, s.t1lw) as t1lw,
@@ -350,10 +436,11 @@ class DatabaseManager {
                     s.y_m,
                     s.x_graph,
                     s.y_graph,
-                    COALESCE(c.player_team1, s.player_team1) as player_team1,
-                    COALESCE(c.player_team2, s.player_team2) as player_team2
+                    s.player_team1,
+                    s.player_team2
                 FROM shots s
-                LEFT JOIN shot_corrections c ON s.shot_id = c.shot_id;
+                LEFT JOIN shot_corrections c ON s.shot_id = c.shot_id
+                WHERE (c.is_hidden IS NULL OR c.is_hidden != 1);
             `);
 
         console.log('Database views created/updated successfully');
@@ -794,9 +881,12 @@ class DatabaseManager {
 
     async saveCorrection(shotId, correctionData) {
         try {
+            // Ensure the table has the correct schema before trying to save
+            await this.ensureCorrectionsTableSchema();
+
             // Check if correction already exists
             const existingCorrection = this.db.exec(
-                "SELECT id FROM shot_corrections WHERE shot_id = ?",
+                "SELECT shot_id FROM shot_corrections WHERE shot_id = ?",
                 [shotId]
             );
 
@@ -841,6 +931,105 @@ class DatabaseManager {
         }
     }
 
+    async ensureCorrectionsTableSchema() {
+        try {
+            // Check if the table exists and has the correct schema
+            const tableInfo = this.db.exec("PRAGMA table_info(shot_corrections)");
+
+            if (tableInfo.length === 0 || tableInfo[0].values.length === 0) {
+                // Table doesn't exist, create it
+                console.log('Creating shot_corrections table...');
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS shot_corrections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        shot_id INTEGER NOT NULL UNIQUE,
+                        time INTEGER,
+                        shooter TEXT,
+                        passer TEXT,
+                        result TEXT,
+                        type TEXT,
+                        is_turnover BOOLEAN,
+                        shooting_team TEXT,
+                        t1lw TEXT,
+                        t1c TEXT,
+                        t1rw TEXT,
+                        t1ld TEXT,
+                        t1rd TEXT,
+                        t1g TEXT,
+                        t1x TEXT,
+                        t2lw TEXT,
+                        t2c TEXT,
+                        t2rw TEXT,
+                        t2ld TEXT,
+                        t2rd TEXT,
+                        t2g TEXT,
+                        t2x TEXT,
+                        pp BOOLEAN,
+                        sh BOOLEAN,
+                        is_hidden BOOLEAN DEFAULT 0,
+                        corrected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (shot_id) REFERENCES shots(shot_id) ON DELETE CASCADE
+                    );
+                `);
+                return;
+            }
+
+            const columns = tableInfo[0].values.map(col => col[1]);
+
+            // Check if we have the old schema
+            const hasOldSchema = columns.includes('corrected_shooter') ||
+                                columns.includes('corrected_assisted_by');
+
+            // Check for required columns
+            const requiredColumns = ['time', 'shooter', 'passer', 'result', 'type', 'is_turnover',
+                                    'shooting_team', 't1lw', 't1c', 't1rw', 't1ld', 't1rd', 't1g', 't1x',
+                                    't2lw', 't2c', 't2rw', 't2ld', 't2rd', 't2g', 't2x', 'pp', 'sh', 'is_hidden'];
+            const missingColumns = requiredColumns.filter(col => !columns.includes(col));
+
+            if (hasOldSchema || missingColumns.length > 0) {
+                console.log('Migrating shot_corrections table to new schema...');
+
+                // Drop and recreate the table
+                this.db.run("DROP TABLE IF EXISTS shot_corrections");
+                this.db.run(`
+                    CREATE TABLE shot_corrections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        shot_id INTEGER NOT NULL UNIQUE,
+                        time INTEGER,
+                        shooter TEXT,
+                        passer TEXT,
+                        result TEXT,
+                        type TEXT,
+                        is_turnover BOOLEAN,
+                        shooting_team TEXT,
+                        t1lw TEXT,
+                        t1c TEXT,
+                        t1rw TEXT,
+                        t1ld TEXT,
+                        t1rd TEXT,
+                        t1g TEXT,
+                        t1x TEXT,
+                        t2lw TEXT,
+                        t2c TEXT,
+                        t2rw TEXT,
+                        t2ld TEXT,
+                        t2rd TEXT,
+                        t2g TEXT,
+                        t2x TEXT,
+                        pp BOOLEAN,
+                        sh BOOLEAN,
+                        is_hidden BOOLEAN DEFAULT 0,
+                        corrected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (shot_id) REFERENCES shots(shot_id) ON DELETE CASCADE
+                    );
+                `);
+                console.log('Shot_corrections table migration completed');
+            }
+        } catch (error) {
+            console.error('Error ensuring corrections table schema:', error);
+        }
+    }
+
     async deleteCorrection(shotId) {
         try {
             this.db.run("DELETE FROM shot_corrections WHERE shot_id = ?", [shotId]);
@@ -849,6 +1038,66 @@ class DatabaseManager {
         } catch (error) {
             console.error('Error deleting correction:', error);
             await window.debugLog('Error deleting correction', { error: error.message });
+            return false;
+        }
+    }
+
+    async hideShot(shotId) {
+        try {
+            // Ensure the table schema is correct
+            await this.ensureCorrectionsTableSchema();
+
+            // Check if a correction entry exists for this shot
+            const existingCorrection = this.db.exec(
+                "SELECT shot_id FROM shot_corrections WHERE shot_id = ?",
+                [shotId]
+            );
+
+            if (existingCorrection.length > 0 && existingCorrection[0].values.length > 0) {
+                // Update existing correction to set is_hidden = 1
+                this.db.run(
+                    "UPDATE shot_corrections SET is_hidden = 1 WHERE shot_id = ?",
+                    [shotId]
+                );
+            } else {
+                // Create a new correction entry with is_hidden = 1
+                this.db.run(
+                    "INSERT INTO shot_corrections (shot_id, is_hidden) VALUES (?, 1)",
+                    [shotId]
+                );
+            }
+
+            await this.saveDatabaseToFile();
+            return true;
+        } catch (error) {
+            console.error('Error hiding shot:', error);
+            await window.debugLog('Error hiding shot', { error: error.message });
+            return false;
+        }
+    }
+
+    async unhideShot(shotId) {
+        try {
+            // Check if a correction entry exists for this shot
+            const existingCorrection = this.db.exec(
+                "SELECT shot_id FROM shot_corrections WHERE shot_id = ?",
+                [shotId]
+            );
+
+            if (existingCorrection.length > 0 && existingCorrection[0].values.length > 0) {
+                // Update existing correction to set is_hidden = 0
+                this.db.run(
+                    "UPDATE shot_corrections SET is_hidden = 0 WHERE shot_id = ?",
+                    [shotId]
+                );
+
+                await this.saveDatabaseToFile();
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error unhiding shot:', error);
+            await window.debugLog('Error unhiding shot', { error: error.message });
             return false;
         }
     }

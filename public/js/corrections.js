@@ -104,25 +104,46 @@ class Corrections {
             let filteredShots = shots;
 
             if (this.currentFilters) {
+                console.log('Filtering shots with:', this.currentFilters);
+                console.log('Total shots before filter:', shots.length);
+
                 filteredShots = shots.filter(shot => {
                     const displayData = corrections[shot.shot_id] ? { ...shot, ...corrections[shot.shot_id] } : shot;
 
-                    if (this.currentFilters.results && !this.currentFilters.results.includes(displayData.result)) {
-                        return false;
+                    // Team filter (OR within teams)
+                    if (this.currentFilters.teams && this.currentFilters.teams.length > 0) {
+                        if (!displayData.shooting_team || !this.currentFilters.teams.includes(displayData.shooting_team)) {
+                            return false;
+                        }
                     }
 
-                    if (this.currentFilters.types && !this.currentFilters.types.includes(displayData.type)) {
-                        return false;
+                    // Result filter (OR within results)
+                    if (this.currentFilters.results && this.currentFilters.results.length > 0) {
+                        if (!displayData.result || !this.currentFilters.results.includes(displayData.result)) {
+                            return false;
+                        }
                     }
 
+                    // Type filter (OR within types)
+                    if (this.currentFilters.types && this.currentFilters.types.length > 0) {
+                        if (!displayData.type || !this.currentFilters.types.includes(displayData.type)) {
+                            return false;
+                        }
+                    }
+
+                    // Turnover filter
                     if (this.currentFilters.turnover !== null && displayData.is_turnover != this.currentFilters.turnover) {
                         return false;
                     }
 
-                    if (this.currentFilters.shooters && displayData.shooter && !this.currentFilters.shooters.includes(displayData.shooter)) {
-                        return false;
+                    // Shooter filter (OR within shooters)
+                    if (this.currentFilters.shooters && this.currentFilters.shooters.length > 0) {
+                        if (!displayData.shooter || !this.currentFilters.shooters.includes(displayData.shooter)) {
+                            return false;
+                        }
                     }
 
+                    // On field filter (OR within players)
                     if (this.currentFilters.onfield && this.currentFilters.onfield.length > 0) {
                         const onFieldPlayers = [
                             displayData.t1lw, displayData.t1c, displayData.t1rw,
@@ -142,6 +163,8 @@ class Corrections {
 
                     return true;
                 });
+
+                console.log('Shots after filter:', filteredShots.length);
             }
 
             if (this.currentSortField && this.currentSortDirection) {
@@ -200,6 +223,20 @@ class Corrections {
     renderCorrectionsTable(shots, corrections, players, gameTeams) {
         const container = document.getElementById('corrections-table-container');
 
+        // Save current filter selections before re-rendering
+        const savedSelections = {};
+        const filterIds = ['filter-team', 'filter-result', 'filter-type', 'filter-turnover', 'filter-shooter', 'filter-onfield'];
+        filterIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                if (element.multiple) {
+                    savedSelections[id] = Array.from(element.selectedOptions).map(opt => opt.value);
+                } else {
+                    savedSelections[id] = element.value;
+                }
+            }
+        });
+
         const controlsWrapper = document.createElement('div');
         controlsWrapper.className = 'controls-wrapper';
 
@@ -220,50 +257,57 @@ class Corrections {
         const filterControls = document.createElement('div');
         filterControls.className = 'filter-controls';
         filterControls.innerHTML = `
-            <label>Filters:</label>
-            <div class="filter-group">
-                <label>Result:</label>
-                <select id="filter-result" multiple size="4">
-                    <option value="">All</option>
-                    <option value="Goal">Goal</option>
-                    <option value="Saved">Saved</option>
-                    <option value="Missed">Missed</option>
-                    <option value="Blocked">Blocked</option>
-                </select>
+            <div class="filter-header">
+                <label>Filters</label>
             </div>
-            <div class="filter-group">
-                <label>Type:</label>
-                <select id="filter-type" multiple size="3">
-                    <option value="">All</option>
-                    <option value="Direct">Direct</option>
-                    <option value="One-timer">One-timer</option>
-                    <option value="Rebound">Rebound</option>
-                </select>
+            <div class="filter-groups-container">
+                <div class="filter-group">
+                    <label>Team</label>
+                    <select id="filter-team" multiple size="4">
+                        ${gameTeams.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Result</label>
+                    <select id="filter-result" multiple size="4">
+                        <option value="Goal">Goal</option>
+                        <option value="Saved">Saved</option>
+                        <option value="Missed">Missed</option>
+                        <option value="Blocked">Blocked</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="filter-type" multiple size="4">
+                        <option value="Direct">Direct</option>
+                        <option value="One-timer">One-timer</option>
+                        <option value="Rebound">Rebound</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Turnover</label>
+                    <select id="filter-turnover" size="4">
+                        <option value="">All</option>
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Shooter</label>
+                    <select id="filter-shooter" multiple size="4">
+                        ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>On Field</label>
+                    <select id="filter-onfield" multiple size="4">
+                        ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                </div>
             </div>
-            <div class="filter-group">
-                <label>Turnover:</label>
-                <select id="filter-turnover">
-                    <option value="">All</option>
-                    <option value="1">Yes</option>
-                    <option value="0">No</option>
-                </select>
+            <div class="filter-actions">
+                <button id="clear-filters" class="filter-btn clear-btn">Clear All Filters</button>
             </div>
-            <div class="filter-group">
-                <label>Shooter:</label>
-                <select id="filter-shooter" multiple size="3">
-                    <option value="">All</option>
-                    ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>On Field:</label>
-                <select id="filter-onfield" multiple size="3">
-                    <option value="">All</option>
-                    ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
-                </select>
-            </div>
-            <button id="apply-filters" class="sort-btn">Apply Filters</button>
-            <button id="clear-filters" class="sort-btn">Clear</button>
         `;
 
         controlsWrapper.appendChild(sortingControls);
@@ -301,15 +345,17 @@ class Corrections {
         shots.forEach(shot => {
             const hasCorrection = corrections[shot.shot_id];
             const row = document.createElement('tr');
-            row.className = hasCorrection ? 'has-correction' : '';
-            row.dataset.shotId = shot.shot_id;
-
             const displayData = hasCorrection ? { ...shot, ...corrections[shot.shot_id] } : shot;
+            const isHidden = displayData.is_hidden == 1;
+
+            // Add classes for correction and hidden status
+            row.className = `${hasCorrection ? 'has-correction' : ''} ${isHidden ? 'is-hidden' : ''}`.trim();
+            row.dataset.shotId = shot.shot_id;
 
             const resultClass = displayData.result === 'Goal' ? 'result-goal' : '';
 
             row.innerHTML = `
-                <td>${shot.shot_id}</td>
+                <td>${shot.shot_id}${isHidden ? ' <span class="hidden-indicator" title="Hidden from dashboard">[HIDDEN]</span>' : ''}</td>
                 <td><input type="number" class="edit-field time-field" data-field="time" value="${displayData.time || ''}" /></td>
                 <td>${this.createPlayerDropdown('shooter', displayData.shooter, players)}</td>
                 <td>${this.createPlayerDropdown('passer', displayData.passer, players)}</td>
@@ -342,6 +388,7 @@ class Corrections {
                 <td>
                     <button class="save-correction-btn" data-shot-id="${shot.shot_id}">Save</button>
                     ${hasCorrection ? `<button class="delete-correction-btn" data-shot-id="${shot.shot_id}">Reset</button>` : ''}
+                    <button class="toggle-hidden-btn ${isHidden ? 'unhide' : 'hide'}" data-shot-id="${shot.shot_id}">${isHidden ? 'Show' : 'Hide'}</button>
                 </td>
             `;
 
@@ -358,6 +405,22 @@ class Corrections {
         container.appendChild(controlsWrapper);
         container.appendChild(tableWrapper);
 
+        // Restore saved filter selections after re-rendering
+        filterIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element && savedSelections[id]) {
+                if (element.multiple && Array.isArray(savedSelections[id])) {
+                    // For multi-select, set each option's selected state
+                    Array.from(element.options).forEach(option => {
+                        option.selected = savedSelections[id].includes(option.value);
+                    });
+                } else {
+                    // For single select
+                    element.value = savedSelections[id];
+                }
+            }
+        });
+
         const sortAscBtn = document.getElementById('sort-asc');
         const sortDescBtn = document.getElementById('sort-desc');
         const sortFieldSelect = document.getElementById('sort-field');
@@ -370,11 +433,51 @@ class Corrections {
             this.sortCorrectionsTable(sortFieldSelect.value, 'desc');
         });
 
-        document.getElementById('apply-filters').addEventListener('click', () => {
-            this.applyCorrectionsFilters();
+        // Add instant filter listeners to all filter dropdowns
+        const filterElements = [
+            'filter-team',
+            'filter-result',
+            'filter-type',
+            'filter-turnover',
+            'filter-shooter',
+            'filter-onfield'
+        ];
+
+        filterElements.forEach(filterId => {
+            const filterElement = document.getElementById(filterId);
+            if (filterElement) {
+                // Enable multi-select without holding Ctrl/Cmd
+                if (filterElement.multiple) {
+                    filterElement.addEventListener('mousedown', function(e) {
+                        if (e.target.tagName === 'OPTION') {
+                            e.preventDefault();
+                            const option = e.target;
+                            const wasSelected = option.selected;
+
+                            // Toggle the option
+                            option.selected = !wasSelected;
+
+                            // Focus back on the select to keep it active
+                            this.focus();
+
+                            // Manually trigger change event
+                            setTimeout(() => {
+                                this.dispatchEvent(new Event('change', { bubbles: true }));
+                            }, 0);
+
+                            return false;
+                        }
+                    });
+                }
+
+                filterElement.addEventListener('change', () => {
+                    this.applyCorrectionsFilters();
+                });
+            }
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
+            document.getElementById('filter-team').selectedIndex = -1;
             document.getElementById('filter-result').selectedIndex = -1;
             document.getElementById('filter-type').selectedIndex = -1;
             document.getElementById('filter-turnover').value = '';
@@ -426,6 +529,19 @@ class Corrections {
                 }
             });
         });
+
+        container.querySelectorAll('.toggle-hidden-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const shotId = e.target.dataset.shotId;
+                const isHidden = e.target.classList.contains('unhide');
+
+                if (isHidden) {
+                    await this.unhideShot(shotId);
+                } else {
+                    await this.hideShot(shotId);
+                }
+            });
+        });
     }
 
     sortCorrectionsTable(field, direction) {
@@ -439,11 +555,16 @@ class Corrections {
     }
 
     applyCorrectionsFilters() {
+        const teamFilter = document.getElementById('filter-team');
         const resultFilter = document.getElementById('filter-result');
         const typeFilter = document.getElementById('filter-type');
         const turnoverFilter = document.getElementById('filter-turnover');
         const shooterFilter = document.getElementById('filter-shooter');
         const onFieldFilter = document.getElementById('filter-onfield');
+
+        const selectedTeams = Array.from(teamFilter.selectedOptions)
+            .map(opt => opt.value)
+            .filter(v => v !== '');
 
         const selectedResults = Array.from(resultFilter.selectedOptions)
             .map(opt => opt.value)
@@ -461,13 +582,22 @@ class Corrections {
             .map(opt => opt.value)
             .filter(v => v !== '');
 
+        console.log('DEBUG selectedTeams:', selectedTeams);
+        console.log('DEBUG selectedResults:', selectedResults);
+        console.log('DEBUG selectedTypes:', selectedTypes);
+        console.log('DEBUG selectedShooters:', selectedShooters);
+        console.log('DEBUG selectedOnField:', selectedOnField);
+
         this.currentFilters = {
+            teams: selectedTeams.length > 0 ? selectedTeams : null,
             results: selectedResults.length > 0 ? selectedResults : null,
             types: selectedTypes.length > 0 ? selectedTypes : null,
             turnover: turnoverFilter.value !== '' ? turnoverFilter.value : null,
             shooters: selectedShooters.length > 0 ? selectedShooters : null,
             onfield: selectedOnField.length > 0 ? selectedOnField : null
         };
+
+        console.log('Active filters:', this.currentFilters);
 
         const gameId = document.getElementById('corrections-game-select').value;
         if (gameId) {
@@ -551,6 +681,52 @@ class Corrections {
         } catch (error) {
             console.error('Error deleting correction:', error);
             alert('Error deleting correction: ' + error.message);
+        }
+    }
+
+    async hideShot(shotId) {
+        try {
+            const success = await this.app.dbManager.hideShot(shotId);
+
+            if (success) {
+                // Reload corrections table
+                const gameId = document.getElementById('corrections-game-select').value;
+                this.loadCorrectionsForGame(gameId);
+
+                // Reload dashboard data to reflect the changes
+                if (gameId && this.app.currentGameId === gameId) {
+                    await this.app.loadGameData(gameId);
+                }
+            } else {
+                alert('Error hiding shot');
+            }
+
+        } catch (error) {
+            console.error('Error hiding shot:', error);
+            alert('Error hiding shot: ' + error.message);
+        }
+    }
+
+    async unhideShot(shotId) {
+        try {
+            const success = await this.app.dbManager.unhideShot(shotId);
+
+            if (success) {
+                // Reload corrections table
+                const gameId = document.getElementById('corrections-game-select').value;
+                this.loadCorrectionsForGame(gameId);
+
+                // Reload dashboard data to reflect the changes
+                if (gameId && this.app.currentGameId === gameId) {
+                    await this.app.loadGameData(gameId);
+                }
+            } else {
+                alert('Error showing shot');
+            }
+
+        } catch (error) {
+            console.error('Error showing shot:', error);
+            alert('Error showing shot: ' + error.message);
         }
     }
 }

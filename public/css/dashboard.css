@@ -332,10 +332,12 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+.dashboard-content #filter-shooter,
 #filter-shooter {
-    flex: 1;
-    min-height: 0;
-    height: auto;
+    flex: 1 1 auto;
+    min-height: 400px;
+    max-height: 100%;
+    height: 100%;
     font-size: 1.1rem !important;
     overflow-y: auto;
     background-color: #1A1A1D;
@@ -345,12 +347,13 @@
     line-height: 1.6;
 }
 
+.dashboard-content #filter-shooter option,
 #filter-shooter option {
     background-color: #1A1A1D;
     color: rgba(255, 255, 255, 0.9);
-    padding: 12px 8px;
+    padding: 12px 8px !important;
     font-size: 1.1rem !important;
-    line-height: 1.6;
+    line-height: 1.6 !important;
 }
 
 #filter-shooter option:checked {

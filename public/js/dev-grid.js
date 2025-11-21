@@ -25,3 +25,11 @@ document.getElementById('toggle-dev-grid').addEventListener('click', function() 
 document.getElementById('toggle-containers-dev').addEventListener('click', function() {
     document.body.classList.toggle('dev-containers-visible');
 });
+
+// Toggle containers dev for corrections page
+const correctionsToggleBtn = document.getElementById('toggle-corrections-containers-dev');
+if (correctionsToggleBtn) {
+    correctionsToggleBtn.addEventListener('click', function() {
+        document.body.classList.toggle('dev-containers-visible');
+    });
+}
