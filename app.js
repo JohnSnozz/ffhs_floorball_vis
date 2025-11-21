@@ -82,6 +82,9 @@ class FloorballApp {
             this.csvImport = new CSVImport(this);
         console.log('CSV Import initialized');
 
+            this.xgOverview = new XGOverview(this);
+        console.log('xG Overview initialized');
+
             this.setupTabs();
         console.log('Tabs set up');
             await debugLog('Tabs set up');
@@ -135,7 +138,8 @@ class FloorballApp {
         const hamburgerMenus = [
             { btn: 'hamburger-btn', menu: 'dropdown-menu' },
             { btn: 'hamburger-btn-import', menu: 'dropdown-menu-import' },
-            { btn: 'hamburger-btn-corrections', menu: 'dropdown-menu-corrections' }
+            { btn: 'hamburger-btn-corrections', menu: 'dropdown-menu-corrections' },
+            { btn: 'hamburger-btn-xg', menu: 'dropdown-menu-xg' }
         ];
 
         hamburgerMenus.forEach(({ btn, menu }) => {
@@ -191,11 +195,19 @@ class FloorballApp {
                 const titles = {
                     'import': 'Import Data',
                     'dashboard': 'Statistics Dashboard',
-                    'corrections': 'Corrections'
+                    'corrections': 'Corrections',
+                    'xg-overview': 'xG Overview'
                 };
                 document.querySelectorAll('.dashboard-header h2').forEach(h2 => {
                     h2.textContent = titles[targetTab] || 'Statistics Dashboard';
                 });
+
+                // Initialize xG Overview when switching to that tab
+                if (targetTab === 'xg-overview' && this.xgOverview) {
+                    setTimeout(() => {
+                        this.xgOverview.initialize();
+                    }, 100);
+                }
 
                 // If switching to dashboard tab, ensure all games are loaded if nothing is selected
                 if (targetTab === 'dashboard') {
