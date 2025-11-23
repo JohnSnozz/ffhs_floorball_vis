@@ -5,12 +5,18 @@ class XGScatterPlot {
         this.selectedShooter = null;
         this.typeFilters = [];
         this.turnoverState = 'off';
+        this.ppState = 'off';
+        this.shState = 'off';
+        this.gtState = 'off';
     }
 
-    setFilters(selectedShooter = null, typeFilters = [], turnoverState = 'off') {
+    setFilters(selectedShooter = null, typeFilters = [], turnoverState = 'off', ppState = 'off', shState = 'off', gtState = 'off') {
         this.selectedShooter = selectedShooter;
         this.typeFilters = typeFilters;
         this.turnoverState = turnoverState;
+        this.ppState = ppState;
+        this.shState = shState;
+        this.gtState = gtState;
     }
 
     createScatterPlot(data) {
@@ -299,6 +305,7 @@ class XGScatterPlot {
             const isOneTimerActive = this.typeFilters.includes('One-timer');
             const isReboundActive = this.typeFilters.includes('Rebound');
 
+            // Check if shot matches any of the selected type filters (Direct/One-timer/Rebound)
             let matchesTypeFilter = false;
             if (isReboundActive && isReboundShot) {
                 matchesTypeFilter = true;
@@ -310,33 +317,41 @@ class XGScatterPlot {
                 matchesTypeFilter = true;
             }
 
-            if (this.turnoverState === 'only') {
-                if (this.typeFilters.length === 0) {
-                    return isTurnoverShot;
-                } else {
-                    return isTurnoverShot || matchesTypeFilter;
-                }
-            } else if (this.turnoverState === 'exclude') {
-                if (isTurnoverShot) {
-                    return false;
-                }
-
-                if (this.typeFilters.length === 0) {
-                    return !isReboundShot;
-                }
-
-                if (isReboundActive && !isDirectActive && !isOneTimerActive) {
-                    return true;
-                }
-
-                return matchesTypeFilter;
-            } else {
-                if (this.typeFilters.length === 0) {
-                    return true;
-                } else {
-                    return matchesTypeFilter;
-                }
+            // AND-based filtering logic (matching dashboard-sidebar.js)
+            // First check type filters (if any are selected)
+            if (this.typeFilters.length > 0 && !matchesTypeFilter) {
+                return false;  // Shot doesn't match selected types, exclude it
             }
+
+            // Then apply turnover filter
+            if (this.turnoverState === 'only') {
+                // Must be a turnover shot (AND with type filters already checked above)
+                if (!isTurnoverShot) return false;
+            } else if (this.turnoverState === 'exclude') {
+                // Must NOT be a turnover shot (AND with type filters already checked above)
+                if (isTurnoverShot) return false;
+            }
+
+            // Apply situation filters (PP, SH, GT)
+            if (this.ppState === 'only') {
+                if (shot.pp !== 1 && shot.pp !== '1') return false;
+            } else if (this.ppState === 'exclude') {
+                if (shot.pp === 1 || shot.pp === '1') return false;
+            }
+
+            if (this.shState === 'only') {
+                if (shot.sh !== 1 && shot.sh !== '1') return false;
+            } else if (this.shState === 'exclude') {
+                if (shot.sh === 1 || shot.sh === '1') return false;
+            }
+
+            if (this.gtState === 'only') {
+                if (shot.is_garbage_time !== 1 && shot.is_garbage_time !== '1') return false;
+            } else if (this.gtState === 'exclude') {
+                if (shot.is_garbage_time === 1 || shot.is_garbage_time === '1') return false;
+            }
+
+            return true;
         });
     }
 

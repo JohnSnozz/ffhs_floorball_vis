@@ -275,7 +275,7 @@
 .filters-container {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 6px;
     flex: 1;
     min-height: 0;
 }
@@ -289,6 +289,10 @@
 .filter-group:first-child {
     flex: 1;
     min-height: 0;
+}
+
+.filter-group:not(:first-child) {
+    margin-top: 0;
 }
 
 .filter-group label {
@@ -335,7 +339,7 @@
 .dashboard-content #filter-shooter,
 #filter-shooter {
     flex: 1 1 auto;
-    min-height: 595px;
+    min-height: 572px;
     max-height: 100%;
     height: 100%;
     font-size: 1.1rem !important;
@@ -552,6 +556,69 @@
 
 .toggle-button.turnover-filter.exclude::before {
     background-color: #ef4444;
+}
+
+.situation-filters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.toggle-button-small {
+    padding: 6px 8px;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 400;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.toggle-button-small::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 0;
+    width: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: height 0.3s ease;
+}
+
+.toggle-button-small:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.toggle-button-small:hover::before {
+    height: 100%;
+}
+
+.toggle-button-small.active {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border-color: #22c55e;
+}
+
+.toggle-button-small.active::before {
+    background-color: #22c55e;
+    height: 100%;
+}
+
+.toggle-button-small.exclude {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.toggle-button-small.exclude::before {
+    background-color: #ef4444;
+    height: 100%;
 }
 
 .visualization-controls {

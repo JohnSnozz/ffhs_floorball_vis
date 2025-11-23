@@ -2,6 +2,9 @@ class DashboardSidebar {
     constructor(app) {
         this.app = app;
         this.turnoverState = 'off';  // 'off', 'only', 'exclude'
+        this.ppState = 'off';  // 'off', 'only', 'exclude'
+        this.shState = 'off';  // 'off', 'only', 'exclude'
+        this.gtState = 'off';  // 'off', 'only', 'exclude'
         this.setupEventListeners();
     }
 
@@ -22,6 +25,9 @@ class DashboardSidebar {
 
     setupFilterToggleButtons() {
         const turnoverButton = document.querySelector('.turnover-filter');
+        const ppButton = document.querySelector('.pp-filter');
+        const shButton = document.querySelector('.sh-filter');
+        const gtButton = document.querySelector('.gt-filter');
         const regularButtons = document.querySelectorAll('.toggle-button-grid .toggle-button:not(.turnover-filter)');
 
         regularButtons.forEach(button => {
@@ -34,6 +40,27 @@ class DashboardSidebar {
         if (turnoverButton) {
             turnoverButton.addEventListener('click', () => {
                 this.cycleTurnoverState(turnoverButton);
+                this.applyFilters();
+            });
+        }
+
+        if (ppButton) {
+            ppButton.addEventListener('click', () => {
+                this.cycleSituationState(ppButton, 'pp');
+                this.applyFilters();
+            });
+        }
+
+        if (shButton) {
+            shButton.addEventListener('click', () => {
+                this.cycleSituationState(shButton, 'sh');
+                this.applyFilters();
+            });
+        }
+
+        if (gtButton) {
+            gtButton.addEventListener('click', () => {
+                this.cycleSituationState(gtButton, 'gt');
                 this.applyFilters();
             });
         }
@@ -127,6 +154,42 @@ class DashboardSidebar {
         }
     }
 
+    cycleSituationState(button, type) {
+        const stateProperty = `${type}State`;
+
+        // GT has reverse logic: off -> exclude (red) -> only (green) -> off
+        if (type === 'gt') {
+            if (this[stateProperty] === 'off') {
+                this[stateProperty] = 'exclude';
+                button.classList.add('exclude');
+                button.classList.remove('active');
+            } else if (this[stateProperty] === 'exclude') {
+                this[stateProperty] = 'only';
+                button.classList.remove('exclude');
+                button.classList.add('active');
+            } else {
+                this[stateProperty] = 'off';
+                button.classList.remove('active');
+                button.classList.remove('exclude');
+            }
+        } else {
+            // PP and SH: off -> only (green) -> exclude (red) -> off
+            if (this[stateProperty] === 'off') {
+                this[stateProperty] = 'only';
+                button.classList.add('active');
+                button.classList.remove('exclude');
+            } else if (this[stateProperty] === 'only') {
+                this[stateProperty] = 'exclude';
+                button.classList.remove('active');
+                button.classList.add('exclude');
+            } else {
+                this[stateProperty] = 'off';
+                button.classList.remove('active');
+                button.classList.remove('exclude');
+            }
+        }
+    }
+
     populateFilters(data) {
         const shooters = [...new Set(data.map(d => d.shooter).filter(s => s && s.trim() !== ''))];
 
@@ -190,6 +253,7 @@ class DashboardSidebar {
                 const isDirectShot = shot.type === 'Direct' || shot.type === 'Turnover | Direct';
                 const isOneTimerShot = shot.type === 'One-timer' || shot.type === 'Turnover | One-timer';
 
+                // Check if shot matches any of the selected type filters (Direct/One-timer/Rebound)
                 let matchesTypeFilter = false;
                 if (isReboundActive && isReboundShot) {
                     matchesTypeFilter = true;
@@ -201,33 +265,55 @@ class DashboardSidebar {
                     matchesTypeFilter = true;
                 }
 
-                if (this.turnoverState === 'only') {
-                    if (selectedTypes.length === 0) {
-                        return isTurnoverShot;
-                    } else {
-                        return isTurnoverShot || matchesTypeFilter;
-                    }
-                } else if (this.turnoverState === 'exclude') {
-                    if (isTurnoverShot) {
-                        return false;
-                    }
-
-                    if (selectedTypes.length === 0) {
-                        return !isReboundShot;
-                    }
-
-                    if (isReboundActive && !isDirectActive && !isOneTimerActive) {
-                        return true;
-                    }
-
-                    return matchesTypeFilter;
-                } else {
-                    if (selectedTypes.length === 0) {
-                        return true;
-                    } else {
-                        return matchesTypeFilter;
-                    }
+                // NEW LOGIC: AND-based filtering
+                // First check type filters (if any are selected)
+                if (selectedTypes.length > 0 && !matchesTypeFilter) {
+                    return false;  // Shot doesn't match selected types, exclude it
                 }
+
+                // Then apply turnover filter
+                if (this.turnoverState === 'only') {
+                    // Must be a turnover shot (AND with type filters already checked above)
+                    return isTurnoverShot;
+                } else if (this.turnoverState === 'exclude') {
+                    // Must NOT be a turnover shot (AND with type filters already checked above)
+                    return !isTurnoverShot;
+                } else {
+                    // Turnover filter is off, type filter already applied above
+                    return true;
+                }
+            });
+        }
+
+        // Store data without PP/SH/GT filters for goalkeeper stats
+        // (PP/SH only reflect Team 1's situation, not opponents')
+        const goalkeeperFilteredData = teamFilteredData;
+
+        // Apply situation filters (PP, SH, GT) with AND logic for player stats only
+        if (this.ppState !== 'off' || this.shState !== 'off' || this.gtState !== 'off') {
+            teamFilteredData = teamFilteredData.filter(shot => {
+                // PP filter
+                if (this.ppState === 'only') {
+                    if (shot.pp !== 1 && shot.pp !== '1') return false;
+                } else if (this.ppState === 'exclude') {
+                    if (shot.pp === 1 || shot.pp === '1') return false;
+                }
+
+                // SH filter
+                if (this.shState === 'only') {
+                    if (shot.sh !== 1 && shot.sh !== '1') return false;
+                } else if (this.shState === 'exclude') {
+                    if (shot.sh === 1 || shot.sh === '1') return false;
+                }
+
+                // GT filter
+                if (this.gtState === 'only') {
+                    if (shot.is_garbage_time !== 1 && shot.is_garbage_time !== '1') return false;
+                } else if (this.gtState === 'exclude') {
+                    if (shot.is_garbage_time === 1 || shot.is_garbage_time === '1') return false;
+                }
+
+                return true;
             });
         }
 
@@ -273,19 +359,24 @@ class DashboardSidebar {
 
         this.syncVisualizationButtonStates();
 
-        this.app.goalkeeperStats.updateGoalkeeperHistogram();
+        // Pass goalkeeperFilteredData (without GT filter) to goalkeeper stats
+        this.app.goalkeeperStats.updateGoalkeeperHistogram(goalkeeperFilteredData);
 
         if (this.app.xgScatter) {
             this.app.xgScatter.setFilters(
                 this.app.selectedShooter,
                 selectedTypes,
-                this.turnoverState
+                this.turnoverState,
+                this.ppState,
+                this.shState,
+                this.gtState
             );
             this.app.xgScatter.createScatterPlot(this.app.currentGameData);
         }
 
         if (this.app.playerMetrics) {
-            this.app.playerMetrics.setData(this.app.currentGameData, this.app.selectedShooter);
+            // Player metrics should use filtered data (includes PP, SH, GT filters)
+            this.app.playerMetrics.setData(teamFilteredData, this.app.selectedShooter);
         }
     }
 }

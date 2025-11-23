@@ -39,6 +39,104 @@ const port = process.env.PORT || 3000;
 // Initialize database
 const db = new Database('./floorball_data.sqlite');
 
+// Rebuild shots_view with garbage time calculation
+console.log('Rebuilding shots_view with garbage time calculation...');
+try {
+    db.run("DROP VIEW IF EXISTS shots_view");
+
+    db.run(`
+        CREATE VIEW shots_view AS
+        WITH base_shots AS (
+            SELECT
+                s.shot_id,
+                s.game_id,
+                s.date,
+                s.team1,
+                s.team2,
+                COALESCE(c.shooting_team, s.shooting_team) as shooting_team,
+                COALESCE(c.result, s.result) as result,
+                CASE
+                    WHEN c.shot_id IS NOT NULL AND c.is_turnover = 1 THEN 'Turnover | ' || COALESCE(c.type, s.type)
+                    WHEN c.shot_id IS NOT NULL THEN COALESCE(c.type, s.type)
+                    ELSE s.type
+                END as type,
+                s.xg as xg,
+                s.xgot as xgot,
+                COALESCE(c.shooter, s.shooter) as shooter,
+                COALESCE(c.passer, s.passer) as passer,
+                COALESCE(c.t1lw, s.t1lw) as t1lw,
+                COALESCE(c.t1c, s.t1c) as t1c,
+                COALESCE(c.t1rw, s.t1rw) as t1rw,
+                COALESCE(c.t1ld, s.t1ld) as t1ld,
+                COALESCE(c.t1rd, s.t1rd) as t1rd,
+                COALESCE(c.t1g, s.t1g) as t1g,
+                COALESCE(c.t1x, s.t1x) as t1x,
+                COALESCE(c.t2lw, s.t2lw) as t2lw,
+                COALESCE(c.t2c, s.t2c) as t2c,
+                COALESCE(c.t2rw, s.t2rw) as t2rw,
+                COALESCE(c.t2ld, s.t2ld) as t2ld,
+                COALESCE(c.t2rd, s.t2rd) as t2rd,
+                COALESCE(c.t2g, s.t2g) as t2g,
+                COALESCE(c.t2x, s.t2x) as t2x,
+                COALESCE(c.pp, s.pp) as pp,
+                COALESCE(c.sh, s.sh) as sh,
+                COALESCE(c.time, s.time) as time,
+                s.distance,
+                s.angle,
+                s.x_m,
+                s.y_m,
+                s.x_graph,
+                s.y_graph,
+                s.player_team1,
+                s.player_team2
+            FROM shots s
+            LEFT JOIN shot_corrections c ON s.shot_id = c.shot_id
+            WHERE (c.is_hidden IS NULL OR c.is_hidden != 1)
+        ),
+        running_scores AS (
+            SELECT
+                *,
+                SUM(CASE
+                    WHEN shooting_team = team1 AND result = 'Goal' THEN 1
+                    ELSE 0
+                END) OVER (PARTITION BY game_id ORDER BY time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as team1_score,
+                SUM(CASE
+                    WHEN shooting_team = team2 AND result = 'Goal' THEN 1
+                    ELSE 0
+                END) OVER (PARTITION BY game_id ORDER BY time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as team2_score
+            FROM base_shots
+        ),
+        final_scores AS (
+            SELECT
+                game_id,
+                MAX(team2_score) as final_team2_score
+            FROM running_scores
+            GROUP BY game_id
+        ),
+        garbage_time_threshold AS (
+            SELECT
+                rs.game_id,
+                MIN(rs.time) as gt_start_time
+            FROM running_scores rs
+            INNER JOIN final_scores fs ON rs.game_id = fs.game_id
+            WHERE rs.team1_score > fs.final_team2_score
+            GROUP BY rs.game_id
+        )
+        SELECT
+            rs.*,
+            CASE
+                WHEN gt.gt_start_time IS NOT NULL AND rs.time > gt.gt_start_time THEN 1
+                ELSE 0
+            END as is_garbage_time
+        FROM running_scores rs
+        LEFT JOIN garbage_time_threshold gt ON rs.game_id = gt.game_id
+    `);
+
+    console.log('shots_view rebuilt successfully with team1_score, team2_score, and is_garbage_time columns');
+} catch (error) {
+    console.error('Error rebuilding shots_view:', error);
+}
+
 // Create auth tables
 db.run(`
     CREATE TABLE IF NOT EXISTS admin_users (
