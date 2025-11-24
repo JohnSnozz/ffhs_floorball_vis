@@ -26,6 +26,7 @@ dev/
 backup_*/
 *_backup/
 *.old
+*.backup
 ffhs_floorbal_vis_old/
 backups/
 refactor-backup/
@@ -45,6 +46,7 @@ Thumbs.db
 *.sublime-workspace
 .vs/
 .cursor/
+.claude/
 
 # Build outputs
 dist/
@@ -56,12 +58,23 @@ tmp/
 temp/
 *.tmp
 
-# CSV data files (uncomment if you don't want to track these)
-# *.csv
+# CSV data files
+*.csv
+*:Zone.Identifier
 
+# Example data
+exampledata/
+
+# Development files
+tokens.html
+dashboard.html
+*dev-tools.css
+*-test.js
+test-*.js
 
 # Other stuff
 CLAUDE.md
 example_vis/
 screenshots/
 projektidee/
+docs/CLAUDE.md
